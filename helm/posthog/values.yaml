@@ -74,6 +74,23 @@ sso:
     key: ""
     secret: ""
 
+# Email (also configurable via PostHog UI at /instance/settings)
+email:
+  enabled: false
+  host: ""
+  port: 587
+  user: ""
+  password: ""
+  useTls: true
+  useSsl: false
+  defaultFrom: ""
+
+# Slack integration (also configurable via PostHog UI)
+slack:
+  clientId: ""
+  clientSecret: ""
+  signingSecret: ""
+
 # Multi-tenancy
 multiOrgEnabled: false
 
@@ -110,23 +127,115 @@ asyncEventActionMapping: false
 actionEventMappingIntervalSeconds: 300
 clearClickhouseRemovedDataScheduleCron: "0 5 * * SAT"
 logLevel: "info"
+skipServiceVersionRequirements: false
+jsUrl: ""  # URL for loading frontend assets; leave empty for default
+
+kafkaUrlForClickhouse: ""   # ClickHouse-specific Kafka address; falls back to main Kafka
+
+# StatsD metrics
+statsd:
+  host: ""
+  port: 8125
+  prefix: ""
+
+# Bot/fraud detection
+workosRadar:
+  enabled: false
+  apiKey: ""
+
+# Signup CAPTCHA
+cloudflareTurnstile:
+  siteKey: ""
+  secretKey: ""
 
 # Set to an RFC3339 timestamp to control session recording metadata switchover
 # e.g. "2026-04-20T00:00:00Z". Leave empty to omit.
 sessionRecordingV2MetadataSwitchover: ""
 
-# Object storage (S3-compatible)
-# "internal" = deploy SeaweedFS, "external" = bring your own S3
-objectStorage:
+# =============================================================================
+# Infrastructure services — internal (chart-managed) or external (bring your own)
+# =============================================================================
+
+# PostgreSQL
+postgres:
+  type: internal  # "internal" = deploy StatefulSet, "external" = bring your own
+  external:
+    host: ""
+    port: 5432
+    sslMode: ""      # require, verify-ca, verify-full
+    sslCa: ""        # path to CA cert inside container
+    sslCert: ""      # path to client cert
+    sslKey: ""       # path to client key
+  persistence:
+    size: 10Gi
+    storageClass: ""
+
+# Redis
+redis:
   type: internal
   external:
-    endpoint: ""
+    url: ""          # e.g. redis://my-redis:6379/ or rediss://... for TLS
+  persistence:
+    size: 2Gi
+    storageClass: ""
+
+# ClickHouse
+clickhouse:
+  type: internal
+  external:
+    host: ""
+    httpPort: 8123
+    nativePort: 9000
+    secure: false
+    verify: false
+  persistence:
+    size: 20Gi
+    storageClass: ""
+
+# Kafka (Redpanda)
+kafka:
+  type: internal
+  external:
+    hosts: ""        # e.g. my-kafka:9092
+  persistence:
+    size: 10Gi
+    storageClass: ""
+
+# Object storage (S3-compatible)
+objectStorage:
+  type: internal     # "internal" = deploy SeaweedFS, "external" = bring your own S3
+  external:
+    endpoint: ""     # e.g. https://s3.amazonaws.com
     region: ""
     bucket: posthog
 
+# ZooKeeper (used by ClickHouse)
+zookeeper:
+  persistence:
+    size: 1Gi
+    storageClass: ""
+
+# Elasticsearch (used by Temporal)
+elasticsearch:
+  persistence:
+    size: 5Gi
+    storageClass: ""
+
+# SeaweedFS persistence (only when objectStorage.type=internal)
+seaweedfs:
+  persistence:
+    size: 10Gi
+    storageClass: ""
+
+# =============================================================================
 # Optional features
+# =============================================================================
+
 geoip:
   enabled: true  # set false for airgapped deployments
+  persistence:
+    size: 1Gi
+    storageClass: ""
 
 # Telemetry
 optOutCapture: true
@@ -137,30 +246,3 @@ ingress:
   className: ""
   annotations: {}
   tls: []
-
-# Storage sizes
-persistence:
-  postgres:
-    size: 10Gi
-    storageClass: ""
-  clickhouse:
-    size: 20Gi
-    storageClass: ""
-  redis:
-    size: 2Gi
-    storageClass: ""
-  kafka:
-    size: 10Gi
-    storageClass: ""
-  zookeeper:
-    size: 1Gi
-    storageClass: ""
-  seaweedfs:
-    size: 10Gi
-    storageClass: ""
-  elasticsearch:
-    size: 5Gi
-    storageClass: ""
-  geoip:
-    size: 1Gi
-    storageClass: ""

@@ -41,5 +41,5 @@ metadata:
   labels:
     {{- include "posthog.labels" . | nindent 4 }}
 spec:
-  {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.geoip.size "storageClass" .Values.persistence.geoip.storageClass) | nindent 2 }}
+  {{- include "posthog.pvcSpec" (dict "size" .Values.geoip.persistence.size "storageClass" .Values.geoip.persistence.storageClass) | nindent 2 }}
 {{- end }}

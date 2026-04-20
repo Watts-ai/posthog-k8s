@@ -1,3 +1,4 @@
+{{- if eq .Values.clickhouse.type "internal" }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -49,7 +50,7 @@ spec:
     - metadata:
         name: clickhouse-data
       spec:
-        {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.clickhouse.size "storageClass" .Values.persistence.clickhouse.storageClass) | nindent 8 }}
+        {{- include "posthog.pvcSpec" (dict "size" .Values.clickhouse.persistence.size "storageClass" .Values.clickhouse.persistence.storageClass) | nindent 8 }}
 ---
 apiVersion: v1
 kind: Service
@@ -68,3 +69,4 @@ spec:
       targetPort: native
   selector:
     {{- include "posthog.selectorLabels" (dict "context" . "component" "clickhouse") | nindent 4 }}
+{{- end }}

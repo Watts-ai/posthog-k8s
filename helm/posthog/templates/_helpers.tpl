@@ -95,7 +95,7 @@ Common environment variables shared by most PostHog services.
 */}}
 {{- define "posthog.commonEnv" -}}
 - name: PGHOST
-  value: {{ include "posthog.fullname" . }}-db
+  value: {{ if eq .Values.postgres.type "external" }}{{ .Values.postgres.external.host }}{{ else }}{{ include "posthog.fullname" . }}-db{{ end }}
 - name: PGUSER
   value: posthog
 - name: PGPASSWORD
@@ -104,15 +104,31 @@ Common environment variables shared by most PostHog services.
       name: {{ include "posthog.secretName" . }}
       key: postgres-password
 - name: DATABASE_URL
-  value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
+  value: postgres://posthog:$(PGPASSWORD)@$(PGHOST):{{ if eq .Values.postgres.type "external" }}{{ .Values.postgres.external.port }}{{ else }}5432{{ end }}/posthog
+{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslMode }}
+- name: POSTHOG_POSTGRES_SSL_MODE
+  value: {{ .Values.postgres.external.sslMode | quote }}
+{{- end }}
+{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslCa }}
+- name: POSTHOG_POSTGRES_CLI_SSL_CA
+  value: {{ .Values.postgres.external.sslCa | quote }}
+{{- end }}
+{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslCert }}
+- name: POSTHOG_POSTGRES_CLI_SSL_CRT
+  value: {{ .Values.postgres.external.sslCert | quote }}
+{{- end }}
+{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslKey }}
+- name: POSTHOG_POSTGRES_CLI_SSL_KEY
+  value: {{ .Values.postgres.external.sslKey | quote }}
+{{- end }}
 - name: CLICKHOUSE_HOST
-  value: {{ include "posthog.fullname" . }}-clickhouse
+  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.host }}{{ else }}{{ include "posthog.fullname" . }}-clickhouse{{ end }}
 - name: CLICKHOUSE_DATABASE
   value: posthog
 - name: CLICKHOUSE_SECURE
-  value: "false"
+  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.secure | quote }}{{ else }}"false"{{ end }}
 - name: CLICKHOUSE_VERIFY
-  value: "false"
+  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.verify | quote }}{{ else }}"false"{{ end }}
 - name: CLICKHOUSE_API_USER
   value: api
 - name: CLICKHOUSE_API_PASSWORD
@@ -128,9 +144,9 @@ Common environment variables shared by most PostHog services.
       name: {{ include "posthog.secretName" . }}
       key: clickhouse-app-password
 - name: REDIS_URL
-  value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+  value: {{ if eq .Values.redis.type "external" }}{{ .Values.redis.external.url }}{{ else }}redis://{{ include "posthog.fullname" . }}-redis:6379/{{ end }}
 - name: KAFKA_HOSTS
-  value: {{ include "posthog.fullname" . }}-kafka:9092
+  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
 {{- if eq .Values.objectStorage.type "external" }}
 - name: OBJECT_STORAGE_ENDPOINT
   value: {{ .Values.objectStorage.external.endpoint | quote }}
@@ -276,6 +292,70 @@ Common environment variables shared by most PostHog services.
 {{- if .Values.npmToken }}
 - name: NPM_TOKEN
   value: {{ .Values.npmToken | quote }}
+{{- end }}
+{{- if .Values.email.enabled }}
+- name: EMAIL_ENABLED
+  value: "true"
+- name: EMAIL_HOST
+  value: {{ .Values.email.host | quote }}
+- name: EMAIL_PORT
+  value: {{ .Values.email.port | quote }}
+{{- if .Values.email.user }}
+- name: EMAIL_HOST_USER
+  value: {{ .Values.email.user | quote }}
+{{- end }}
+{{- if .Values.email.password }}
+- name: EMAIL_HOST_PASSWORD
+  value: {{ .Values.email.password | quote }}
+{{- end }}
+- name: EMAIL_USE_TLS
+  value: {{ .Values.email.useTls | quote }}
+- name: EMAIL_USE_SSL
+  value: {{ .Values.email.useSsl | quote }}
+{{- if .Values.email.defaultFrom }}
+- name: EMAIL_DEFAULT_FROM
+  value: {{ .Values.email.defaultFrom | quote }}
+{{- end }}
+{{- end }}
+{{- if .Values.slack.clientId }}
+- name: SLACK_APP_CLIENT_ID
+  value: {{ .Values.slack.clientId | quote }}
+- name: SLACK_APP_CLIENT_SECRET
+  value: {{ .Values.slack.clientSecret | quote }}
+- name: SLACK_APP_SIGNING_SECRET
+  value: {{ .Values.slack.signingSecret | quote }}
+{{- end }}
+- name: SKIP_SERVICE_VERSION_REQUIREMENTS
+  value: {{ .Values.skipServiceVersionRequirements | quote }}
+{{- if .Values.jsUrl }}
+- name: JS_URL
+  value: {{ .Values.jsUrl | quote }}
+{{- end }}
+{{- if .Values.kafkaUrlForClickhouse }}
+- name: KAFKA_URL_FOR_CLICKHOUSE
+  value: {{ .Values.kafkaUrlForClickhouse | quote }}
+{{- end }}
+{{- if .Values.statsd.host }}
+- name: STATSD_HOST
+  value: {{ .Values.statsd.host | quote }}
+- name: STATSD_PORT
+  value: {{ .Values.statsd.port | quote }}
+{{- if .Values.statsd.prefix }}
+- name: STATSD_PREFIX
+  value: {{ .Values.statsd.prefix | quote }}
+{{- end }}
+{{- end }}
+{{- if .Values.workosRadar.enabled }}
+- name: WORKOS_RADAR_ENABLED
+  value: "true"
+- name: WORKOS_RADAR_API_KEY
+  value: {{ .Values.workosRadar.apiKey | quote }}
+{{- end }}
+{{- if .Values.cloudflareTurnstile.siteKey }}
+- name: CLOUDFLARE_TURNSTILE_SITE_KEY
+  value: {{ .Values.cloudflareTurnstile.siteKey | quote }}
+- name: CLOUDFLARE_TURNSTILE_SECRET_KEY
+  value: {{ .Values.cloudflareTurnstile.secretKey | quote }}
 {{- end }}
 {{- end }}
 

@@ -34,15 +34,15 @@ spec:
     - metadata:
         name: zookeeper-data
       spec:
-        {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.zookeeper.size "storageClass" .Values.persistence.zookeeper.storageClass) | nindent 8 }}
+        {{- include "posthog.pvcSpec" (dict "size" .Values.zookeeper.persistence.size "storageClass" .Values.zookeeper.persistence.storageClass) | nindent 8 }}
     - metadata:
         name: zookeeper-datalog
       spec:
-        {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.zookeeper.size "storageClass" .Values.persistence.zookeeper.storageClass) | nindent 8 }}
+        {{- include "posthog.pvcSpec" (dict "size" .Values.zookeeper.persistence.size "storageClass" .Values.zookeeper.persistence.storageClass) | nindent 8 }}
     - metadata:
         name: zookeeper-logs
       spec:
-        {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.zookeeper.size "storageClass" .Values.persistence.zookeeper.storageClass) | nindent 8 }}
+        {{- include "posthog.pvcSpec" (dict "size" .Values.zookeeper.persistence.size "storageClass" .Values.zookeeper.persistence.storageClass) | nindent 8 }}
 ---
 apiVersion: v1
 kind: Service
