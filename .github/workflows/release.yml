@@ -27,10 +27,12 @@ jobs:
         run: |
           VERSION=$(grep '^version:' helm/posthog/Chart.yaml | awk '{print $2}')
           APP_VERSION=$(grep '^appVersion:' helm/posthog/Chart.yaml | awk '{print $2}' | tr -d '"')
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f1-2)
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "app_version=${APP_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
           echo "major=${MAJOR}" >> "$GITHUB_OUTPUT"
           echo "minor=${MINOR}" >> "$GITHUB_OUTPUT"
 
@@ -45,9 +47,9 @@ jobs:
       # Build + push ClickHouse image
       - name: Build ClickHouse image
         run: |
-          REGISTRY=${{ env.REGISTRY }}/${{ github.repository_owner }} ./build.sh
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/posthog-clickhouse:${{ steps.versions.outputs.version }}-${{ steps.versions.outputs.app_version }}
-          docker push ${{ env.REGISTRY }}/${{ github.repository_owner }}/posthog-clickhouse:latest
+          REGISTRY=${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }} ./build.sh
+          docker push ${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }}/posthog-clickhouse:${{ steps.versions.outputs.version }}-${{ steps.versions.outputs.app_version }}
+          docker push ${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }}/posthog-clickhouse:latest
 
       # Package + push Helm chart
       - name: Push Helm chart
@@ -56,7 +58,7 @@ jobs:
           helm package helm/posthog
 
           # Push exact version (0.1.0)
-          helm push posthog-${{ steps.versions.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}
+          helm push posthog-${{ steps.versions.outputs.version }}.tgz oci://${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }}
 
           # Push minor tag (0.1)
           cp posthog-${{ steps.versions.outputs.version }}.tgz posthog-${{ steps.versions.outputs.minor }}.tgz
@@ -66,11 +68,11 @@ jobs:
           tar -xzf posthog-${{ steps.versions.outputs.version }}.tgz -C /tmp/chart-minor
           sed -i "s/^version:.*/version: ${{ steps.versions.outputs.minor }}/" /tmp/chart-minor/posthog/Chart.yaml
           helm package /tmp/chart-minor/posthog -d /tmp
-          helm push /tmp/posthog-${{ steps.versions.outputs.minor }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}
+          helm push /tmp/posthog-${{ steps.versions.outputs.minor }}.tgz oci://${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }}
 
           # Push major tag (0)
           mkdir -p /tmp/chart-major
           tar -xzf posthog-${{ steps.versions.outputs.version }}.tgz -C /tmp/chart-major
           sed -i "s/^version:.*/version: ${{ steps.versions.outputs.major }}/" /tmp/chart-major/posthog/Chart.yaml
           helm package /tmp/chart-major/posthog -d /tmp
-          helm push /tmp/posthog-${{ steps.versions.outputs.major }}.tgz oci://${{ env.REGISTRY }}/${{ github.repository_owner }}
+          helm push /tmp/posthog-${{ steps.versions.outputs.major }}.tgz oci://${{ env.REGISTRY }}/${{ steps.versions.outputs.owner }}
