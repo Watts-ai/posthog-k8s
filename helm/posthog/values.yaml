@@ -62,17 +62,16 @@ images:
     tag: "2.47.2"
 
 # SSO / Social Auth
+# Enable each provider and provide credentials via the Secret resource
+# Secret keys: github-oauth-key, github-oauth-secret, gitlab-oauth-key, etc.
 sso:
   github:
-    key: ""
-    secret: ""
+    enabled: false
   gitlab:
-    key: ""
-    secret: ""
+    enabled: false
     apiUrl: "https://gitlab.com"
   google:
-    key: ""
-    secret: ""
+    enabled: false
 
 # Email (also configurable via PostHog UI at /instance/settings)
 email:
@@ -101,9 +100,11 @@ trustAllProxies: false
 allowedHosts: "*"
 
 # App tokens (for installing private plugins/apps)
-githubToken: ""
-gitlabToken: ""
-npmToken: ""
+# Provide via Secret keys: github-token, gitlab-token, npm-token
+appTokens:
+  github: false
+  gitlab: false
+  npm: false
 
 # Feature flags cache
 teamNegativeCacheCapacity: 10000

@@ -261,37 +261,43 @@ Common environment variables shared by most PostHog services.
 {{- end }}
 - name: ALLOWED_HOSTS
   value: {{ .Values.allowedHosts | quote }}
-{{- if .Values.sso.github.key }}
+{{- if .Values.sso.github.enabled }}
 - name: SOCIAL_AUTH_GITHUB_KEY
-  value: {{ .Values.sso.github.key | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: github-oauth-key
 - name: SOCIAL_AUTH_GITHUB_SECRET
-  value: {{ .Values.sso.github.secret | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: github-oauth-secret
 {{- end }}
-{{- if .Values.sso.gitlab.key }}
+{{- if .Values.sso.gitlab.enabled }}
 - name: SOCIAL_AUTH_GITLAB_KEY
-  value: {{ .Values.sso.gitlab.key | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: gitlab-oauth-key
 - name: SOCIAL_AUTH_GITLAB_SECRET
-  value: {{ .Values.sso.gitlab.secret | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: gitlab-oauth-secret
 - name: SOCIAL_AUTH_GITLAB_API_URL
   value: {{ .Values.sso.gitlab.apiUrl | quote }}
 {{- end }}
-{{- if .Values.sso.google.key }}
+{{- if .Values.sso.google.enabled }}
 - name: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
-  value: {{ .Values.sso.google.key | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: google-oauth-key
 - name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
-  value: {{ .Values.sso.google.secret | quote }}
-{{- end }}
-{{- if .Values.githubToken }}
-- name: GITHUB_TOKEN
-  value: {{ .Values.githubToken | quote }}
-{{- end }}
-{{- if .Values.gitlabToken }}
-- name: GITLAB_TOKEN
-  value: {{ .Values.gitlabToken | quote }}
-{{- end }}
-{{- if .Values.npmToken }}
-- name: NPM_TOKEN
-  value: {{ .Values.npmToken | quote }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "posthog.secretName" . }}
+      key: google-oauth-secret
 {{- end }}
 {{- if .Values.email.enabled }}
 - name: EMAIL_ENABLED
