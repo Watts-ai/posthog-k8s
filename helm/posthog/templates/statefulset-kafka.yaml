@@ -19,6 +19,9 @@ spec:
         {{- include "posthog.selectorLabels" (dict "context" . "component" "kafka") | nindent 8 }}
     spec:
       {{- include "posthog.scheduling" . | nindent 6 }}
+      securityContext:
+        fsGroup: 101
+        runAsUser: 101
       containers:
         - name: kafka
           image: {{ include "posthog.infraImage" .Values.images.kafka }}

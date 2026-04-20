@@ -6,8 +6,7 @@ metadata:
   labels:
     {{- include "posthog.labels" . | nindent 4 }}
   annotations:
-    helm.sh/hook: post-install,post-upgrade
-    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PostSync
 spec:
   backoffLimit: 3
   template:
