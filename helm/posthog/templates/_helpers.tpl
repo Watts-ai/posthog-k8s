@@ -32,17 +32,17 @@ app.kubernetes.io/component: {{ .component }}
 {{- end }}
 
 {{/*
-PostHog app image (Python/Django). Tag defaults to appVersion.
+PostHog app image (Python/Django).
 */}}
 {{- define "posthog.image" -}}
-{{ .Values.images.posthog.repository }}:{{ .Values.images.posthog.tag | default .Chart.AppVersion }}
+{{ .Values.images.posthog.repository }}:{{ .Values.images.posthog.tag }}
 {{- end }}
 
 {{/*
-PostHog Node image. Tag defaults to appVersion.
+PostHog Node image.
 */}}
 {{- define "posthog.nodeImage" -}}
-{{ .Values.images.posthogNode.repository }}:{{ .Values.images.posthogNode.tag | default .Chart.AppVersion }}
+{{ .Values.images.posthogNode.repository }}:{{ .Values.images.posthogNode.tag }}
 {{- end }}
 
 {{/*
@@ -54,7 +54,7 @@ ClickHouse image (custom). Tag defaults to <chartVersion>-<appVersion>.
 
 {{/*
 Rust/Go service image helper.
-Usage: {{ include "posthog.rustImage" (dict "repo" .Values.images.capture.repository "tag" (.Values.images.capture.tag | default .Chart.AppVersion)) }}
+Usage: {{ include "posthog.rustImage" (dict "repo" .Values.images.capture.repository "tag" .Values.images.capture.tag) }}
 */}}
 {{- define "posthog.rustImage" -}}
 {{ .repo }}:{{ .tag }}

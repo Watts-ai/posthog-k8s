@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: feature-flags
-          image: {{ include "posthog.rustImage" (dict "repo" .Values.images.featureFlags.repository "tag" (.Values.images.featureFlags.tag | default .Chart.AppVersion)) }}
+          image: {{ include "posthog.rustImage" (dict "repo" .Values.images.featureFlags.repository "tag" (.Values.images.featureFlags.tag)) }}
           ports:
             - containerPort: 3001
               name: http

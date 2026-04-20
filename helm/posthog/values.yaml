@@ -11,27 +11,37 @@ secrets:
   create: true
   name: ""  # override Secret name (default: <fullname>-secrets)
 
-# Image repositories — tags default to .Chart.AppVersion (PostHog commit SHA)
-# Override any repository for airgapped/mirrored registries
+# Image repositories and tags
+# Every image is pinned. Override any repository/tag for airgapped registries.
+# To upgrade: update tags here and bump Chart version.
 images:
   posthog:
     repository: posthog/posthog
+    tag: b553fcd83c262334950ef3120c4dc70e13e57a18
   posthogNode:
     repository: posthog/posthog-node
+    tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
   clickhouse:
     repository: ghcr.io/watts-ai/posthog-clickhouse
+    # tag defaults to <chartVersion>-<appVersion> via _helpers.tpl
   capture:
     repository: ghcr.io/posthog/posthog/capture
+    tag: sha-ae8c37f
   featureFlags:
     repository: ghcr.io/posthog/posthog/feature-flags
+    tag: sha-06bb98c
   propertyDefsRs:
     repository: ghcr.io/posthog/posthog/property-defs-rs
+    tag: sha-babbe33
   cyclotronJanitor:
     repository: ghcr.io/posthog/posthog/cyclotron-janitor
+    tag: sha-b238b34
   cymbal:
     repository: ghcr.io/posthog/posthog/cymbal
+    tag: sha-fd4b210
   livestream:
     repository: ghcr.io/posthog/posthog/livestream
+    tag: sha-77fc873
   # Infrastructure (pinned versions, not tied to appVersion)
   postgres:
     repository: postgres
