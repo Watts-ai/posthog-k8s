@@ -1,0 +1,110 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "posthog.fullname" . }}
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.domain }}
+      http:
+        paths:
+          # Event capture
+          - path: /e
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-capture
+                port:
+                  number: 3000
+          - path: /i/v0
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-capture
+                port:
+                  number: 3000
+          - path: /batch
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-capture
+                port:
+                  number: 3000
+          - path: /capture
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-capture
+                port:
+                  number: 3000
+          # Session replay capture
+          - path: /s
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-replay-capture
+                port:
+                  number: 3000
+          # Feature flags
+          - path: /flags
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-feature-flags
+                port:
+                  number: 3001
+          # Livestream
+          - path: /livestream
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-livestream
+                port:
+                  number: 8080
+          # Webhooks
+          - path: /public/webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-plugins
+                port:
+                  number: 6738
+          - path: /public/m
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-plugins
+                port:
+                  number: 6738
+          {{- if eq .Values.objectStorage.type "internal" }}
+          # Object storage (public URLs for exports, recordings, etc.)
+          - path: /posthog
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-seaweedfs
+                port:
+                  number: 8333
+          {{- end }}
+          # Default — PostHog web UI
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-web
+                port:
+                  number: 8000
+{{- end }}

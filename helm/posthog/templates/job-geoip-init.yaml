@@ -1,0 +1,45 @@
+{{- if .Values.geoip.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "posthog.fullname" . }}-geoip-init
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "geoip-init") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: geoip-init
+          image: alpine:3.20
+          command:
+            - sh
+            - -c
+            - |
+              [ -f /share/GeoLite2-City.mmdb ] && echo "GeoIP exists" && exit 0
+              apk add --no-cache curl brotli
+              curl -L "https://mmdbcdn.posthog.net/" --http1.1 | brotli --decompress > /share/GeoLite2-City.mmdb
+          volumeMounts:
+            - name: geoip
+              mountPath: /share
+      volumes:
+        - name: geoip
+          persistentVolumeClaim:
+            claimName: {{ include "posthog.fullname" . }}-geoip
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "posthog.fullname" . }}-geoip
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.geoip.size "storageClass" .Values.persistence.geoip.storageClass) | nindent 2 }}
+{{- end }}

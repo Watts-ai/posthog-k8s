@@ -1,0 +1,6 @@
+apiVersion: v2
+name: posthog
+description: Unofficial Helm chart for self-hosting PostHog on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "b553fcd83c262334950ef3120c4dc70e13e57a18"

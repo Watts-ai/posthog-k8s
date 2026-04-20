@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal-ui
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-ui") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-ui") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-ui") | nindent 8 }}
+    spec:
+      containers:
+        - name: temporal-ui
+          image: {{ include "posthog.infraImage" .Values.images.temporalUi }}
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: {{ include "posthog.fullname" . }}-temporal:7233
+            - name: TEMPORAL_CORS_ORIGINS
+              value: {{ include "posthog.siteUrl" . }}
+            - name: TEMPORAL_CSRF_COOKIE_INSECURE
+              value: "true"
+            - name: TEMPORAL_CODEC_ENDPOINT
+              value: {{ include "posthog.siteUrl" . }}
+          ports:
+            - containerPort: 8080
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal-ui
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-ui") | nindent 4 }}

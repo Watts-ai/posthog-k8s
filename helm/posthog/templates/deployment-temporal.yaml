@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal") | nindent 8 }}
+    spec:
+      containers:
+        - name: temporal
+          image: {{ include "posthog.infraImage" .Values.images.temporal }}
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: posthog
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: postgres-password
+            - name: POSTGRES_SEEDS
+              value: {{ include "posthog.fullname" . }}-db
+            - name: DYNAMIC_CONFIG_FILE_PATH
+              value: config/dynamicconfig/development-sql.yaml
+            - name: ENABLE_ES
+              value: "false"
+          ports:
+            - containerPort: 7233
+              name: grpc
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "nc -z localhost 7233"]
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: dynamicconfig
+              mountPath: /etc/temporal/config/dynamicconfig
+              readOnly: true
+      volumes:
+        - name: dynamicconfig
+          configMap:
+            name: {{ include "posthog.fullname" . }}-temporal-dynamicconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 7233
+      targetPort: grpc
+      name: grpc
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal") | nindent 4 }}

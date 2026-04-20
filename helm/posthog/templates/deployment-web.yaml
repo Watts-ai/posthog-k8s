@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-web
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "web") | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "web") | nindent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until nc -z {{ include "posthog.fullname" . }}-db 5432; do sleep 2; done
+              echo "Waiting for ClickHouse..."
+              until nc -z {{ include "posthog.fullname" . }}-clickhouse 9000; do sleep 2; done
+              echo "Dependencies ready"
+      containers:
+        - name: web
+          image: {{ include "posthog.image" . }}
+          command: ["bash", "-c", "./bin/migrate && ./bin/docker-server"]
+          ports:
+            - containerPort: 8000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /_health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: LIVESTREAM_HOST
+              value: https://{{ .Values.domain }}/livestream
+            - name: RECORDING_API_URL
+              value: http://{{ include "posthog.fullname" . }}-recording-api:6738
+            - name: USE_GRANIAN
+              value: "true"
+            - name: GRANIAN_WORKERS
+              value: "2"
+            - name: CDP_API_URL
+              value: http://{{ include "posthog.fullname" . }}-plugins:6738
+            - name: FLAGS_REDIS_ENABLED
+              value: "false"
+            - name: OTEL_SERVICE_NAME
+              value: posthog
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-web
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "web") | nindent 4 }}

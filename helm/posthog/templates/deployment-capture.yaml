@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-capture
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "capture") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "capture") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "capture") | nindent 8 }}
+    spec:
+      containers:
+        - name: capture
+          image: {{ include "posthog.rustImage" (dict "repo" .Values.images.capture.repository "tag" (.Values.images.capture.tag | default .Chart.AppVersion)) }}
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: ADDRESS
+              value: "0.0.0.0:3000"
+            - name: KAFKA_TOPIC
+              value: events_plugin_ingestion
+            - name: KAFKA_HOSTS
+              value: {{ include "posthog.fullname" . }}-kafka:9092
+            - name: REDIS_URL
+              value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+            - name: CAPTURE_MODE
+              value: events
+            - name: RUST_LOG
+              value: info,rdkafka=warn
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-capture
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "capture") | nindent 4 }}

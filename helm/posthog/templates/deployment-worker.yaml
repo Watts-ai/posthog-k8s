@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-worker
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "worker") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "worker") | nindent 8 }}
+    spec:
+      containers:
+        - name: worker
+          image: {{ include "posthog.image" . }}
+          command: ["./bin/docker-worker-celery", "--with-scheduler"]
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: RECORDING_API_URL
+              value: http://{{ include "posthog.fullname" . }}-recording-api:6738
+            - name: CDP_API_URL
+              value: http://{{ include "posthog.fullname" . }}-plugins:6738
+            - name: FLAGS_REDIS_ENABLED
+              value: "false"
+            - name: POSTHOG_SKIP_MIGRATION_CHECKS
+              value: "1"

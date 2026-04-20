@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "posthog.fullname" . }}-postgres-init
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+data:
+  init-databases.sh: |
+    #!/bin/bash
+    set -e
+    for db in cyclotron behavioral_cohorts posthog_persons; do
+      echo "Checking if database '$db' exists..."
+      DB_EXISTS=$(psql -U "$POSTGRES_USER" -tAc "SELECT 1 FROM pg_database WHERE datname='$db'")
+      if [ -z "$DB_EXISTS" ]; then
+        echo "Creating database '$db'..."
+        psql -U "$POSTGRES_USER" -c "CREATE DATABASE $db;"
+        psql -U "$POSTGRES_USER" -c "GRANT ALL PRIVILEGES ON DATABASE $db TO $POSTGRES_USER;"
+        echo "Database '$db' created"
+      else
+        echo "Database '$db' already exists"
+      fi
+    done

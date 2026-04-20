@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal-admin-tools
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-admin-tools") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-admin-tools") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-admin-tools") | nindent 8 }}
+    spec:
+      containers:
+        - name: temporal-admin-tools
+          image: {{ include "posthog.infraImage" .Values.images.temporalAdminTools }}
+          env:
+            - name: TEMPORAL_CLI_ADDRESS
+              value: {{ include "posthog.fullname" . }}-temporal:7233
+          stdin: true
+          tty: true

@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-ingestion-logs
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "ingestion-logs") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "ingestion-logs") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "ingestion-logs") | nindent 8 }}
+    spec:
+      containers:
+        - name: ingestion-logs
+          image: {{ include "posthog.nodeImage" . }}
+          command: ["node", "nodejs/dist/index.js"]
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: PLUGIN_SERVER_MODE
+              value: ingestion-logs
+            - name: LOGS_REDIS_HOST
+              value: {{ include "posthog.fullname" . }}-redis
+            - name: LOGS_REDIS_TLS
+              value: "false"

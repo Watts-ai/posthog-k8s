@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-temporal-django-worker
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-django-worker") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-django-worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-django-worker") | nindent 8 }}
+    spec:
+      containers:
+        - name: temporal-django-worker
+          image: {{ include "posthog.image" . }}
+          command: ["./bin/temporal-django-worker"]
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: TEMPORAL_HOST
+              value: {{ include "posthog.fullname" . }}-temporal
+            - name: CDP_API_URL
+              value: http://{{ include "posthog.fullname" . }}-plugins:6738
+            - name: FLAGS_REDIS_ENABLED
+              value: "false"

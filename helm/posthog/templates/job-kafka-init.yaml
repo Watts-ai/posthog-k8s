@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "posthog.fullname" . }}-kafka-init
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "kafka-init") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-init
+          image: {{ include "posthog.infraImage" .Values.images.kafka }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              BROKER="{{ include "posthog.fullname" . }}-kafka:9092"
+              echo "Waiting for Kafka broker..."
+              TIMEOUT=60; ELAPSED=0
+              until rpk topic list --brokers "$BROKER" 2>/dev/null; do
+                echo "Not ready (${ELAPSED}s)..."; sleep 2; ELAPSED=$((ELAPSED + 2))
+                [ $ELAPSED -ge $TIMEOUT ] && echo "Timeout" && exit 1
+              done
+              for topic in clickhouse_events_json; do
+                rpk topic create "$topic" --brokers "$BROKER" -p 1 -r 1 2>&1 ||
+                  rpk topic list --brokers "$BROKER" | grep -q "$topic" || exit 1
+              done
+              rpk topic list --brokers "$BROKER"

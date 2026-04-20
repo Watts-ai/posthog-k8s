@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-recording-api
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "recording-api") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "recording-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "recording-api") | nindent 8 }}
+    spec:
+      containers:
+        - name: recording-api
+          image: {{ include "posthog.nodeImage" . }}
+          command: ["node", "nodejs/dist/index.js"]
+          ports:
+            - containerPort: 6738
+              name: http
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: PLUGIN_SERVER_MODE
+              value: recording-api
+            - name: SESSION_RECORDING_API_REDIS_HOST
+              value: {{ include "posthog.fullname" . }}-redis
+            - name: SESSION_RECORDING_API_REDIS_PORT
+              value: "6379"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-recording-api
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6738
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "recording-api") | nindent 4 }}

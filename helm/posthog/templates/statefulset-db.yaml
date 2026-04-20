@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "posthog.fullname" . }}-db
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "db") | nindent 4 }}
+spec:
+  replicas: 1
+  serviceName: {{ include "posthog.fullname" . }}-db
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "db") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "db") | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ include "posthog.infraImage" .Values.images.postgres }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: posthog
+            - name: POSTGRES_DB
+              value: posthog
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: postgres-password
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "posthog"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 30
+            failureThreshold: 30
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "posthog"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 30
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: postgres-init
+          configMap:
+            name: {{ include "posthog.fullname" . }}-postgres-init
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        {{- include "posthog.pvcSpec" (dict "size" .Values.persistence.postgres.size "storageClass" .Values.persistence.postgres.storageClass) | nindent 8 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-db
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "db") | nindent 4 }}

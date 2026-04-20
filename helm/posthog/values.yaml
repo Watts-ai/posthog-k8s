@@ -1,0 +1,166 @@
+# Domain and TLS
+domain: posthog.example.com
+siteUrl: ""  # defaults to https://<domain>, override for http testing
+secureCookies: true  # set false when not behind TLS
+
+# Secrets
+# - create: true → chart auto-generates a Secret with crypto-secure random values
+# - create: false → chart expects the Secret to already exist (e.g. via ExternalSecrets)
+# Secret keys: posthog-secret, encryption-salt-keys
+secrets:
+  create: true
+  name: ""  # override Secret name (default: <fullname>-secrets)
+
+# Image repositories — tags default to .Chart.AppVersion (PostHog commit SHA)
+# Override any repository for airgapped/mirrored registries
+images:
+  posthog:
+    repository: posthog/posthog
+  posthogNode:
+    repository: posthog/posthog-node
+  clickhouse:
+    repository: ghcr.io/watts-ai/posthog-clickhouse
+  capture:
+    repository: ghcr.io/posthog/posthog/capture
+  featureFlags:
+    repository: ghcr.io/posthog/posthog/feature-flags
+  propertyDefsRs:
+    repository: ghcr.io/posthog/posthog/property-defs-rs
+  cyclotronJanitor:
+    repository: ghcr.io/posthog/posthog/cyclotron-janitor
+  cymbal:
+    repository: ghcr.io/posthog/posthog/cymbal
+  livestream:
+    repository: ghcr.io/posthog/posthog/livestream
+  # Infrastructure (pinned versions, not tied to appVersion)
+  postgres:
+    repository: postgres
+    tag: 15.12-alpine
+  redis:
+    repository: redis
+    tag: 7.2-alpine
+  zookeeper:
+    repository: zookeeper
+    tag: "3.7.0"
+  kafka:
+    repository: docker.redpanda.com/redpandadata/redpanda
+    tag: v25.1.9
+  seaweedfs:
+    repository: chrislusf/seaweedfs
+    tag: "4.03"
+  elasticsearch:
+    repository: elasticsearch
+    tag: 7.17.28
+  temporal:
+    repository: temporalio/auto-setup
+    tag: "1.26.2"
+  temporalAdminTools:
+    repository: temporalio/admin-tools
+    tag: "1.26.2"
+  temporalUi:
+    repository: temporalio/ui
+    tag: "2.47.2"
+
+# SSO / Social Auth
+sso:
+  github:
+    key: ""
+    secret: ""
+  gitlab:
+    key: ""
+    secret: ""
+    apiUrl: "https://gitlab.com"
+  google:
+    key: ""
+    secret: ""
+
+# Multi-tenancy
+multiOrgEnabled: false
+
+# Security / Proxy
+allowedIpBlocks: ""
+trustedProxies: ""
+trustAllProxies: false
+allowedHosts: "*"
+
+# App tokens (for installing private plugins/apps)
+githubToken: ""
+gitlabToken: ""
+npmToken: ""
+
+# Feature flags cache
+teamNegativeCacheCapacity: 10000
+teamNegativeCacheTtlSeconds: 300
+
+# ClickHouse tuning
+debugQueries: false
+clickhouseDisableExternalSchemas: false
+
+# Materialized columns
+materializeColumnsAnalysisPeriodHours: 168
+materializeColumnsBackfillPeriodDays: 90
+materializeColumnsMaxAtOnce: 10
+materializeColumnsMinimumQueryTime: 3000
+materializeColumnsScheduleCron: "0 5 * * SAT"
+
+# Misc
+disablePaidFeatureShowcasing: false
+captureInternalMetrics: false
+asyncEventActionMapping: false
+actionEventMappingIntervalSeconds: 300
+clearClickhouseRemovedDataScheduleCron: "0 5 * * SAT"
+logLevel: "info"
+
+# Set to an RFC3339 timestamp to control session recording metadata switchover
+# e.g. "2026-04-20T00:00:00Z". Leave empty to omit.
+sessionRecordingV2MetadataSwitchover: ""
+
+# Object storage (S3-compatible)
+# "internal" = deploy SeaweedFS, "external" = bring your own S3
+objectStorage:
+  type: internal
+  external:
+    endpoint: ""
+    region: ""
+    bucket: posthog
+
+# Optional features
+geoip:
+  enabled: true  # set false for airgapped deployments
+
+# Telemetry
+optOutCapture: true
+
+# Ingress
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  tls: []
+
+# Storage sizes
+persistence:
+  postgres:
+    size: 10Gi
+    storageClass: ""
+  clickhouse:
+    size: 20Gi
+    storageClass: ""
+  redis:
+    size: 2Gi
+    storageClass: ""
+  kafka:
+    size: 10Gi
+    storageClass: ""
+  zookeeper:
+    size: 1Gi
+    storageClass: ""
+  seaweedfs:
+    size: 10Gi
+    storageClass: ""
+  elasticsearch:
+    size: 5Gi
+    storageClass: ""
+  geoip:
+    size: 1Gi
+    storageClass: ""

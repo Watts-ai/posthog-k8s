@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-plugins
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "plugins") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "plugins") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "plugins") | nindent 8 }}
+    spec:
+      containers:
+        - name: plugins
+          image: {{ include "posthog.nodeImage" . }}
+          command: ["node", "nodejs/dist/index.js"]
+          ports:
+            - containerPort: 6738
+              name: http
+          env:
+            {{- include "posthog.commonEnv" . | nindent 12 }}
+            - name: PERSONS_DATABASE_URL
+              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+            - name: BEHAVIORAL_COHORTS_DATABASE_URL
+              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+            - name: CYCLOTRON_DATABASE_URL
+              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+            - name: CDP_REDIS_HOST
+              value: {{ include "posthog.fullname" . }}-redis
+            - name: CDP_REDIS_PORT
+              value: "6379"
+            - name: LOGS_REDIS_HOST
+              value: {{ include "posthog.fullname" . }}-redis
+            - name: LOGS_REDIS_PORT
+              value: "6379"
+            - name: LOGS_REDIS_TLS
+              value: "false"
+            - name: TRACES_REDIS_HOST
+              value: {{ include "posthog.fullname" . }}-redis
+            - name: TRACES_REDIS_PORT
+              value: "6379"
+            - name: TRACES_REDIS_TLS
+              value: "false"
+          {{- if .Values.geoip.enabled }}
+          volumeMounts:
+            - name: geoip
+              mountPath: /share
+          {{- end }}
+      {{- if .Values.geoip.enabled }}
+      volumes:
+        - name: geoip
+          persistentVolumeClaim:
+            claimName: {{ include "posthog.fullname" . }}-geoip
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-plugins
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6738
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "plugins") | nindent 4 }}

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-cymbal
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "cymbal") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "cymbal") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "cymbal") | nindent 8 }}
+    spec:
+      containers:
+        - name: cymbal
+          image: {{ include "posthog.rustImage" (dict "repo" .Values.images.cymbal.repository "tag" (.Values.images.cymbal.tag | default .Chart.AppVersion)) }}
+          ports:
+            - containerPort: 3302
+              name: http
+          env:
+            - name: KAFKA_HOSTS
+              value: {{ include "posthog.fullname" . }}-kafka:9092
+            - name: OBJECT_STORAGE_BUCKET
+              value: posthog
+            - name: OBJECT_STORAGE_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: s3-access-key-id
+            - name: OBJECT_STORAGE_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: s3-secret-access-key
+            {{- if eq .Values.objectStorage.type "external" }}
+            - name: OBJECT_STORAGE_ENDPOINT
+              value: {{ .Values.objectStorage.external.endpoint | quote }}
+            {{- else }}
+            - name: OBJECT_STORAGE_ENDPOINT
+              value: http://{{ include "posthog.fullname" . }}-seaweedfs:8333
+            {{- end }}
+            - name: OBJECT_STORAGE_FORCE_PATH_STYLE
+              value: "true"
+            - name: BIND_HOST
+              value: "0.0.0.0"
+            - name: BIND_PORT
+              value: "3302"
+            - name: DATABASE_URL
+              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+            - name: PERSONS_URL
+              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+            - name: REDIS_URL
+              value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+            - name: ISSUE_BUCKETS_REDIS_URL
+              value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+            - name: RUST_LOG
+              value: info
+            {{- if .Values.geoip.enabled }}
+            - name: MAXMIND_DB_PATH
+              value: /share/GeoLite2-City.mmdb
+            {{- end }}
+          {{- if .Values.geoip.enabled }}
+          volumeMounts:
+            - name: geoip
+              mountPath: /share
+          {{- end }}
+      {{- if .Values.geoip.enabled }}
+      volumes:
+        - name: geoip
+          persistentVolumeClaim:
+            claimName: {{ include "posthog.fullname" . }}-geoip
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-cymbal
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3302
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "cymbal") | nindent 4 }}
