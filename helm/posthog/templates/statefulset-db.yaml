@@ -34,6 +34,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "posthog.secretName" . }}
                   key: postgres-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "posthog"]
