@@ -16,6 +16,7 @@ spec:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "ingestion-error-tracking") | nindent 8 }}
     spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
         - name: ingestion-error-tracking
           image: {{ include "posthog.nodeImage" . }}

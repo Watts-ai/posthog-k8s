@@ -16,6 +16,7 @@ spec:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-admin-tools") | nindent 8 }}
     spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
         - name: temporal-admin-tools
           image: {{ include "posthog.infraImage" .Values.images.temporalAdminTools }}

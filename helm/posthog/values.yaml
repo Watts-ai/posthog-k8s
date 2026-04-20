@@ -248,6 +248,10 @@ geoip:
     size: 1Gi
     storageClass: ""
 
+# Node scheduling (for dedicated node groups with taints)
+tolerations: []
+nodeSelector: {}
+
 # Telemetry
 optOutCapture: true
 

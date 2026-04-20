@@ -16,6 +16,7 @@ spec:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-django-worker") | nindent 8 }}
     spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
         - name: temporal-django-worker
           image: {{ include "posthog.image" . }}

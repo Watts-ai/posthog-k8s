@@ -17,6 +17,7 @@ spec:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "zookeeper") | nindent 8 }}
     spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
         - name: zookeeper
           image: {{ include "posthog.infraImage" .Values.images.zookeeper }}

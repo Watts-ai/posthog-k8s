@@ -16,6 +16,7 @@ spec:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "temporal-ui") | nindent 8 }}
     spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
         - name: temporal-ui
           image: {{ include "posthog.infraImage" .Values.images.temporalUi }}

@@ -379,3 +379,19 @@ resources:
 storageClassName: {{ .storageClass }}
 {{- end }}
 {{- end }}
+
+{{/*
+Node scheduling: tolerations, nodeSelector, affinity.
+Include in every pod spec.
+Usage: {{ include "posthog.scheduling" . | nindent 6 }}
+*/}}
+{{- define "posthog.scheduling" -}}
+{{- with .Values.tolerations }}
+tolerations:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.nodeSelector }}
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
