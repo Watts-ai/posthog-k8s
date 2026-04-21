@@ -17,6 +17,14 @@ spec:
         {{- include "posthog.selectorLabels" (dict "context" . "component" "cymbal") | nindent 8 }}
     spec:
       {{- include "posthog.scheduling" . | nindent 6 }}
+      {{- if .Values.geoip.enabled }}
+      initContainers:
+        - name: geoip
+          image: {{ .Values.images.geoip.repository }}:{{ .Values.images.geoip.tag }}
+          volumeMounts:
+            - name: geoip
+              mountPath: /share
+      {{- end }}
       containers:
         - name: cymbal
           image: {{ include "posthog.rustImage" (dict "repo" .Values.images.cymbal.repository "tag" (.Values.images.cymbal.tag)) }}
@@ -82,8 +90,7 @@ spec:
       {{- if .Values.geoip.enabled }}
       volumes:
         - name: geoip
-          persistentVolumeClaim:
-            claimName: {{ include "posthog.fullname" . }}-geoip
+          emptyDir: {}
       {{- end }}
 ---
 apiVersion: v1

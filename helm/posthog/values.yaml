@@ -42,6 +42,9 @@ images:
   livestream:
     repository: ghcr.io/posthog/posthog/livestream
     tag: sha-77fc873
+  geoip:
+    repository: ghcr.io/watts-ai/posthog-geoip
+    tag: latest
   # Infrastructure (pinned versions, not tied to appVersion)
   postgres:
     repository: postgres
@@ -243,10 +246,10 @@ seaweedfs:
 # =============================================================================
 
 geoip:
-  enabled: false  # requires GeoIP init job to populate PVC; enable once reliable
-  persistence:
-    size: 1Gi
-    storageClass: ""
+  enabled: true
+  # GeoIP database is baked into the posthog-geoip image at build time.
+  # This avoids runtime downloads, which is required for air-gapped
+  # deployments and prevents startup failures if the CDN is unreachable.
 
 # Node scheduling (for dedicated node groups with taints)
 tolerations: []
