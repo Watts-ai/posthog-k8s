@@ -16,8 +16,8 @@ secrets:
 # To upgrade: update tags here and bump Chart version.
 images:
   posthog:
-    repository: posthog/posthog
-    tag: b553fcd83c262334950ef3120c4dc70e13e57a18
+    repository: ghcr.io/watts-ai/posthog/posthog
+    tag: watts-5ff322eb05351cc22a91e95d78f327a77640c63d
   posthogNode:
     repository: posthog/posthog-node
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
