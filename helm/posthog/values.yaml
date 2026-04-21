@@ -17,7 +17,7 @@ secrets:
 images:
   posthog:
     repository: ghcr.io/watts-ai/posthog/posthog
-    tag: watts-5ff322eb05351cc22a91e95d78f327a77640c63d
+    tag: watts-9addd30973ce615818f5cabcd2f7bf4b89c0bfe6
   posthogNode:
     repository: posthog/posthog-node
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
@@ -85,6 +85,9 @@ sso:
     apiUrl: "https://gitlab.com"
   google:
     enabled: false
+  oidc:
+    enabled: false
+    endpoint: ""  # e.g. https://accounts.google.com
 
 # Email (also configurable via PostHog UI at /instance/settings)
 email:

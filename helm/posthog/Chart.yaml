@@ -3,4 +3,4 @@ name: posthog
 description: Unofficial Helm chart for self-hosting PostHog on Kubernetes
 type: application
 version: 0.8.0
-appVersion: "5ff322eb05351cc22a91e95d78f327a77640c63d"
+appVersion: "9addd30973ce615818f5cabcd2f7bf4b89c0bfe6"
