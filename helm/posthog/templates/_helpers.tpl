@@ -147,12 +147,23 @@ Common environment variables shared by most PostHog services.
   value: {{ if eq .Values.redis.type "external" }}{{ .Values.redis.external.url }}{{ else }}redis://{{ include "posthog.fullname" . }}-redis:6379/{{ end }}
 - name: KAFKA_HOSTS
   value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
-{{- /* Node.js rdkafka consumer/producer have separate hardcoded 'kafka:9092' defaults */}}
-{{- /* that ignore KAFKA_HOSTS. Override them explicitly. */}}
+{{- /* Node.js rdkafka has per-producer/consumer broker defaults hardcoded to 'kafka:9092'. */}}
+{{- /* Each producer type reads KAFKA_<TYPE>_METADATA_BROKER_LIST from process.env. */}}
+{{- $kafkaBrokers := (ternary .Values.kafka.external.hosts (printf "%s-kafka:9092" (include "posthog.fullname" .)) (eq .Values.kafka.type "external")) }}
 - name: KAFKA_CONSUMER_METADATA_BROKER_LIST
-  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
+  value: {{ $kafkaBrokers }}
 - name: KAFKA_PRODUCER_METADATA_BROKER_LIST
-  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
+  value: {{ $kafkaBrokers }}
+- name: KAFKA_METRICS_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
+- name: KAFKA_MONITORING_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
+- name: KAFKA_CDP_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
+- name: KAFKA_WARPSTREAM_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
+- name: KAFKA_INGESTION_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
 {{- if eq .Values.objectStorage.type "external" }}
 - name: OBJECT_STORAGE_ENDPOINT
   value: {{ .Values.objectStorage.external.endpoint | quote }}

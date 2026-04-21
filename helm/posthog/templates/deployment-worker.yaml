@@ -20,7 +20,20 @@ spec:
       containers:
         - name: worker
           image: {{ include "posthog.image" . }}
-          command: ["./bin/docker-worker-celery", "--with-scheduler"]
+          command:
+            - bash
+            - -c
+            - |
+              # Upstream docker-worker-celery hardcodes SKIP_ASYNC_MIGRATIONS_SETUP=0
+              # which crashes on fresh ClickHouse before async migrations run.
+              # Run celery directly with the scheduler (beat) in the background.
+              source ./bin/celery-queues.env
+              ./bin/docker-worker-beat &
+              trap 'kill $(jobs -p)' EXIT
+              SKIP_ASYNC_MIGRATIONS_SETUP=1 CELERY_WORKER_QUEUES=$CELERY_WORKER_QUEUES \
+                celery -A posthog worker -Ofair -n node@%h --without-mingle --without-heartbeat &
+              wait -n
+              exit $?
           env:
             {{- include "posthog.commonEnv" . | nindent 12 }}
             - name: RECORDING_API_URL
