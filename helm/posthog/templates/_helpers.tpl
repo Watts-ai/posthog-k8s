@@ -147,6 +147,12 @@ Common environment variables shared by most PostHog services.
   value: {{ if eq .Values.redis.type "external" }}{{ .Values.redis.external.url }}{{ else }}redis://{{ include "posthog.fullname" . }}-redis:6379/{{ end }}
 - name: KAFKA_HOSTS
   value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
+{{- /* Node.js rdkafka consumer/producer have separate hardcoded 'kafka:9092' defaults */}}
+{{- /* that ignore KAFKA_HOSTS. Override them explicitly. */}}
+- name: KAFKA_CONSUMER_METADATA_BROKER_LIST
+  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
+- name: KAFKA_PRODUCER_METADATA_BROKER_LIST
+  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
 {{- if eq .Values.objectStorage.type "external" }}
 - name: OBJECT_STORAGE_ENDPOINT
   value: {{ .Values.objectStorage.external.endpoint | quote }}
