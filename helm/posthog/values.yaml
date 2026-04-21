@@ -243,7 +243,7 @@ seaweedfs:
 # =============================================================================
 
 geoip:
-  enabled: true  # set false for airgapped deployments
+  enabled: false  # requires GeoIP init job to populate PVC; enable once reliable
   persistence:
     size: 1Gi
     storageClass: ""
