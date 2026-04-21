@@ -30,7 +30,14 @@ spec:
       containers:
         - name: worker
           image: {{ include "posthog.image" . }}
-          command: ["./bin/docker-worker-celery", "--with-scheduler"]
+          command:
+            - bash
+            - -c
+            - |
+              # Upstream script hardcodes SKIP_ASYNC_MIGRATIONS_SETUP=0 on the celery
+              # command line, overriding env vars. Patch it to respect the env var.
+              sed -i 's/SKIP_ASYNC_MIGRATIONS_SETUP=0/SKIP_ASYNC_MIGRATIONS_SETUP=${SKIP_ASYNC_MIGRATIONS_SETUP:-0}/g' ./bin/docker-worker-celery
+              exec ./bin/docker-worker-celery --with-scheduler
           env:
             {{- include "posthog.commonEnv" . | nindent 12 }}
             - name: RECORDING_API_URL
