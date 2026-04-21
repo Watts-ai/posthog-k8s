@@ -164,6 +164,8 @@ Common environment variables shared by most PostHog services.
   value: {{ $kafkaBrokers }}
 - name: KAFKA_INGESTION_PRODUCER_METADATA_BROKER_LIST
   value: {{ $kafkaBrokers }}
+- name: KAFKA_WAREHOUSE_PRODUCER_METADATA_BROKER_LIST
+  value: {{ $kafkaBrokers }}
 {{- if eq .Values.objectStorage.type "external" }}
 - name: OBJECT_STORAGE_ENDPOINT
   value: {{ .Values.objectStorage.external.endpoint | quote }}
