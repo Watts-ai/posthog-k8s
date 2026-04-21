@@ -30,6 +30,11 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 5
           env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: postgres-password
             - name: WRITE_DATABASE_URL
               value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: READ_DATABASE_URL

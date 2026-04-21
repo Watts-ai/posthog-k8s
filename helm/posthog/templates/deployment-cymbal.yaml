@@ -26,6 +26,8 @@ spec:
           env:
             - name: KAFKA_HOSTS
               value: {{ include "posthog.fullname" . }}-kafka:9092
+            - name: KAFKA_CONSUMER_GROUP
+              value: cymbal
             - name: OBJECT_STORAGE_BUCKET
               value: posthog
             - name: OBJECT_STORAGE_ACCESS_KEY_ID

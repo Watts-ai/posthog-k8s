@@ -65,6 +65,8 @@ spec:
               value: posthog
             - name: POSTHOG_SKIP_MIGRATION_CHECKS
               value: "1"
+            - name: SKIP_ASYNC_MIGRATIONS_SETUP
+              value: "1"
 ---
 apiVersion: v1
 kind: Service

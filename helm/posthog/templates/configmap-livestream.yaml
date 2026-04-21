@@ -23,4 +23,4 @@ data:
       notification:
         enabled: false
     mmdb:
-      path: '/share/GeoLite2-City.mmdb'
+      path: ''

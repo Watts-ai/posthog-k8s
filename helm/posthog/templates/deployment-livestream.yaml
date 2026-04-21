@@ -33,19 +33,10 @@ spec:
             - name: livestream-config
               mountPath: /configs/configs.yml
               subPath: configs.yml
-            {{- if .Values.geoip.enabled }}
-            - name: geoip
-              mountPath: /share
-            {{- end }}
       volumes:
         - name: livestream-config
           configMap:
             name: {{ include "posthog.fullname" . }}-livestream
-        {{- if .Values.geoip.enabled }}
-        - name: geoip
-          persistentVolumeClaim:
-            claimName: {{ include "posthog.fullname" . }}-geoip
-        {{- end }}
 ---
 apiVersion: v1
 kind: Service
