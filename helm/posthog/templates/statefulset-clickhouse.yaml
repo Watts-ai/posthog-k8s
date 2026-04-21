@@ -47,6 +47,13 @@ spec:
           volumeMounts:
             - name: clickhouse-data
               mountPath: /var/lib/clickhouse
+            - name: clickhouse-k8s-config
+              mountPath: /etc/clickhouse-server/config.d/k8s-overrides.xml
+              subPath: k8s-overrides.xml
+      volumes:
+        - name: clickhouse-k8s-config
+          configMap:
+            name: {{ include "posthog.fullname" . }}-clickhouse
   volumeClaimTemplates:
     - metadata:
         name: clickhouse-data
