@@ -12,6 +12,8 @@ spec:
       {{- include "posthog.selectorLabels" (dict "context" . "component" "livestream") | nindent 6 }}
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-livestream.yaml") . | sha256sum }}
       labels:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "livestream") | nindent 8 }}
