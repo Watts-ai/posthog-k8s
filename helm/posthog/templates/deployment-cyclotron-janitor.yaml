@@ -21,7 +21,12 @@ spec:
         - name: cyclotron-janitor
           image: {{ include "posthog.rustImage" (dict "repo" .Values.images.cyclotronJanitor.repository "tag" (.Values.images.cyclotronJanitor.tag)) }}
           env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: postgres-password
             - name: DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/cyclotron
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/cyclotron
             - name: KAFKA_HOSTS
               value: {{ include "posthog.fullname" . }}-kafka:9092

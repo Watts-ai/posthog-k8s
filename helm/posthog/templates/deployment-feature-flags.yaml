@@ -31,13 +31,13 @@ spec:
             periodSeconds: 5
           env:
             - name: WRITE_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: READ_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: PERSONS_WRITE_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: PERSONS_READ_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: REDIS_URL
               value: redis://{{ include "posthog.fullname" . }}-redis:6379/
             - name: ADDRESS

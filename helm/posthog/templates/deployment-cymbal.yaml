@@ -51,10 +51,15 @@ spec:
               value: "0.0.0.0"
             - name: BIND_PORT
               value: "3302"
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "posthog.secretName" . }}
+                  key: postgres-password
             - name: DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: PERSONS_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: REDIS_URL
               value: redis://{{ include "posthog.fullname" . }}-redis:6379/
             - name: ISSUE_BUCKETS_REDIS_URL

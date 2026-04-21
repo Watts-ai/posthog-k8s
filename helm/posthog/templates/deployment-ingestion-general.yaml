@@ -26,9 +26,9 @@ spec:
             - name: PLUGIN_SERVER_MODE
               value: ingestion-v2-combined
             - name: PERSONS_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: BEHAVIORAL_COHORTS_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: COOKIELESS_REDIS_HOST
               value: {{ include "posthog.fullname" . }}-redis
             - name: COOKIELESS_REDIS_PORT

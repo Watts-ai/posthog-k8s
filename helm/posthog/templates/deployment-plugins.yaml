@@ -27,11 +27,11 @@ spec:
           env:
             {{- include "posthog.commonEnv" . | nindent 12 }}
             - name: PERSONS_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: BEHAVIORAL_COHORTS_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: CYCLOTRON_DATABASE_URL
-              value: postgres://posthog:posthog@{{ include "posthog.fullname" . }}-db:5432/posthog
+              value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: CDP_REDIS_HOST
               value: {{ include "posthog.fullname" . }}-redis
             - name: CDP_REDIS_PORT
