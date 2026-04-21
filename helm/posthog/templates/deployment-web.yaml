@@ -33,6 +33,8 @@ spec:
               until nc -z {{ include "posthog.fullname" . }}-db 5432; do sleep 2; done
               echo "Waiting for ClickHouse..."
               until nc -z {{ include "posthog.fullname" . }}-clickhouse 9000; do sleep 2; done
+              echo "Waiting for ZooKeeper..."
+              until nc -z {{ include "posthog.fullname" . }}-zookeeper 2181; do sleep 2; done
               echo "Dependencies ready"
       containers:
         - name: web
@@ -41,7 +43,11 @@ spec:
             - bash
             - -c
             - |
-              ./bin/migrate --scope=postgres --scope=clickhouse --scope=persons &&
+              for i in $(seq 1 10); do
+                ./bin/migrate --scope=postgres --scope=clickhouse --scope=persons && break
+                echo "Migration attempt $i failed, retrying in 10s..."
+                sleep 10
+              done &&
               ./bin/docker-server
           ports:
             - containerPort: 8000
