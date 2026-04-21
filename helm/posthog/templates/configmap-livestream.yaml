@@ -22,3 +22,5 @@ data:
         group_id: 'livestream-session-recordings'
       notification:
         enabled: false
+    mmdb:
+      path: '/GeoLite2-City.mmdb'
