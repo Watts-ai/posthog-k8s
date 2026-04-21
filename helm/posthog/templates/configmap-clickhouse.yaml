@@ -18,7 +18,7 @@ data:
         <posthog>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -26,7 +26,7 @@ data:
         <posthog_single_shard>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -34,7 +34,7 @@ data:
         <posthog_migrations>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -42,7 +42,7 @@ data:
         <posthog_writable>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -50,7 +50,7 @@ data:
         <posthog_primary_replica>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -58,7 +58,7 @@ data:
         <ai_events>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -66,7 +66,7 @@ data:
         <aux>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -74,7 +74,7 @@ data:
         <ops>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
@@ -82,7 +82,7 @@ data:
         <sessions>
           <shard>
             <replica>
-              <host>{{ include "posthog.fullname" . }}-clickhouse</host>
+              <host>{{ include "posthog.fullname" . }}-clickhouse-0.{{ include "posthog.fullname" . }}-clickhouse.{{ .Release.Namespace }}.svc.cluster.local</host>
               <port>9000</port>
             </replica>
           </shard>
