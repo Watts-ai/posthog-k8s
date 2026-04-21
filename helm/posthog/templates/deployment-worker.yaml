@@ -31,3 +31,5 @@ spec:
               value: "false"
             - name: POSTHOG_SKIP_MIGRATION_CHECKS
               value: "1"
+            - name: SKIP_ASYNC_MIGRATIONS_SETUP
+              value: "1"
