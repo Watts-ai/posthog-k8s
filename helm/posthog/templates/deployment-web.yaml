@@ -37,7 +37,12 @@ spec:
       containers:
         - name: web
           image: {{ include "posthog.image" . }}
-          command: ["bash", "-c", "./bin/migrate && ./bin/docker-server"]
+          command:
+            - bash
+            - -c
+            - |
+              ./bin/migrate --scope=postgres --scope=clickhouse --scope=persons &&
+              ./bin/docker-server
           ports:
             - containerPort: 8000
               name: http
