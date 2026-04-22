@@ -386,6 +386,8 @@ Common environment variables shared by most PostHog services.
 - name: SLACK_APP_SIGNING_SECRET
   value: {{ .Values.slack.signingSecret | quote }}
 {{- end }}
+- name: TEMPORAL_HOST
+  value: {{ include "posthog.fullname" . }}-temporal
 - name: SKIP_SERVICE_VERSION_REQUIREMENTS
   value: {{ .Values.skipServiceVersionRequirements | quote }}
 {{- if .Values.jsUrl }}

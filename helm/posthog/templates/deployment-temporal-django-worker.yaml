@@ -23,8 +23,6 @@ spec:
           command: ["./bin/temporal-django-worker"]
           env:
             {{- include "posthog.commonEnv" . | nindent 12 }}
-            - name: TEMPORAL_HOST
-              value: {{ include "posthog.fullname" . }}-temporal
             - name: CDP_API_URL
               value: http://{{ include "posthog.fullname" . }}-plugins:6738
             - name: FLAGS_REDIS_ENABLED
