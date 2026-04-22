@@ -43,7 +43,7 @@ spec:
               name: grpc
           readinessProbe:
             exec:
-              command: ["sh", "-c", "nc -z localhost 7233"]
+              command: ["sh", "-c", "nc -z $(hostname -i) 7233"]
             initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 5
