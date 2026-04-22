@@ -91,96 +91,207 @@ https://{{ .Values.domain }}
 {{- end }}
 
 {{/*
+Render a single env var entry.
+  - string → value: field
+  - map   → rendered as-is (e.g. valueFrom: secretKeyRef: ...)
+  - other → fail with actionable error
+Usage: {{ include "posthog.envValue" (dict "name" "FOO" "value" .Values.foo) }}
+*/}}
+{{- define "posthog.envValue" -}}
+{{- if kindIs "string" .value -}}
+- name: {{ .name }}
+  value: {{ .value | quote }}
+{{- else if kindIs "map" .value -}}
+- name: {{ .name }}
+{{- toYaml .value | nindent 2 }}
+{{- else -}}
+{{- fail (printf "values field for env var %s must be a string or map, got %s. Wrap the value in quotes." .name (kindOf .value)) }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Check if a value is "set" (non-empty string or any map).
+Returns "true" or empty string.
+Usage: {{- if include "posthog.hasValue" .Values.foo }}
+*/}}
+{{- define "posthog.hasValue" -}}
+{{- if kindIs "map" . -}}true{{- else if and (kindIs "string" .) (ne . "") -}}true{{- end -}}
+{{- end -}}
+
+{{/*
+Validate all-or-none: if any field is set, all must be set.
+Usage: {{ include "posthog.requireTogether" (dict "section" "email" "fields" (dict "host" .Values.email.host "user" .Values.email.user)) }}
+*/}}
+{{- define "posthog.requireTogether" -}}
+{{- $set := list }}
+{{- $missing := list }}
+{{- range $name, $val := .fields }}
+  {{- if include "posthog.hasValue" $val }}
+    {{- $set = append $set $name }}
+  {{- else }}
+    {{- $missing = append $missing $name }}
+  {{- end }}
+{{- end }}
+{{- if and (gt (len $set) 0) (gt (len $missing) 0) }}
+  {{- fail (printf "%s: incomplete configuration. Set: [%s]. Missing: [%s]" .section ($set | sortAlpha | join ", ") ($missing | sortAlpha | join ", ")) }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Validate required-with-defaults fields haven't been blanked out.
+Only call when section is active.
+Usage: {{ include "posthog.requireNonEmpty" (dict "section" "email" "fields" (dict "port" .Values.email.port)) }}
+*/}}
+{{- define "posthog.requireNonEmpty" -}}
+{{- range $name, $val := .fields }}
+  {{- if not (include "posthog.hasValue" $val) }}
+    {{- if or (kindIs "string" $val) (kindIs "invalid" $val) }}
+    {{- fail (printf "%s: '%s' is required but is empty. Provide a value or remove the override to use the default." $.section $name) }}
+    {{- else }}
+    {{- fail (printf "%s: '%s' must be a string or map, got %s. Wrap the value in quotes." $.section $name (kindOf $val)) }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Validate optional fields aren't set without their required trigger fields.
+Usage: {{ include "posthog.requireGate" (dict "section" "email" "gateName" "host" "gate" .Values.email.host "fields" (dict "password" .Values.email.password)) }}
+*/}}
+{{- define "posthog.requireGate" -}}
+{{- if not (include "posthog.hasValue" .gate) }}
+  {{- range $name, $val := .fields }}
+    {{- if include "posthog.hasValue" $val }}
+      {{- fail (printf "%s: '%s' is set but '%s' is required. Provide '%s' or remove '%s'." $.section $name $.gateName $.gateName $name) }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Common environment variables shared by most PostHog services.
 */}}
 {{- define "posthog.commonEnv" -}}
+{{- include "posthog.requireTogether" (dict "section" "email" "fields" (dict "host" .Values.email.host "user" .Values.email.user)) -}}
+{{- include "posthog.requireGate" (dict "section" "email" "gateName" "host" "gate" .Values.email.host "fields" (dict "password" .Values.email.password "defaultFrom" .Values.email.defaultFrom)) -}}
+{{- include "posthog.requireTogether" (dict "section" "slack" "fields" (dict "clientId" .Values.slack.clientId "clientSecret" .Values.slack.clientSecret "signingSecret" .Values.slack.signingSecret)) -}}
+{{- include "posthog.requireTogether" (dict "section" "sso.github" "fields" (dict "key" .Values.sso.github.key "secret" .Values.sso.github.secret)) -}}
+{{- include "posthog.requireTogether" (dict "section" "sso.gitlab" "fields" (dict "key" .Values.sso.gitlab.key "secret" .Values.sso.gitlab.secret)) -}}
+{{- include "posthog.requireTogether" (dict "section" "sso.google" "fields" (dict "key" .Values.sso.google.key "secret" .Values.sso.google.secret)) -}}
+{{- include "posthog.requireTogether" (dict "section" "sso.oidc" "fields" (dict "key" .Values.sso.oidc.key "secret" .Values.sso.oidc.secret "endpoint" .Values.sso.oidc.endpoint)) -}}
+{{- include "posthog.requireGate" (dict "section" "sso.oidc" "gateName" "key" "gate" .Values.sso.oidc.key "fields" (dict "iconUrl" .Values.sso.oidc.iconUrl "displayName" .Values.sso.oidc.displayName)) -}}
+{{- include "posthog.requireTogether" (dict "section" "cloudflareTurnstile" "fields" (dict "siteKey" .Values.cloudflareTurnstile.siteKey "secretKey" .Values.cloudflareTurnstile.secretKey)) -}}
+{{- include "posthog.requireTogether" (dict "section" "objectStorage" "fields" (dict "accessKeyId" .Values.objectStorage.accessKeyId "secretAccessKey" .Values.objectStorage.secretAccessKey)) -}}
+{{- include "posthog.requireGate" (dict "section" "statsd" "gateName" "host" "gate" .Values.statsd.host "fields" (dict "prefix" .Values.statsd.prefix)) -}}
+{{- if eq .Values.postgres.type "external" }}
+{{ include "posthog.envValue" (dict "name" "PGHOST" "value" .Values.postgres.external.host) }}
+{{ include "posthog.envValue" (dict "name" "PGPORT" "value" .Values.postgres.external.port) }}
+{{- else }}
 - name: PGHOST
-  value: {{ if eq .Values.postgres.type "external" }}{{ .Values.postgres.external.host }}{{ else }}{{ include "posthog.fullname" . }}-db{{ end }}
+  value: {{ include "posthog.fullname" . }}-db
+- name: PGPORT
+  value: "5432"
+{{- end }}
 - name: PGUSER
   value: posthog
+{{- if include "posthog.hasValue" .Values.postgres.password }}
+{{ include "posthog.envValue" (dict "name" "PGPASSWORD" "value" .Values.postgres.password) }}
+{{- else }}
 - name: PGPASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: postgres-password
+{{- end }}
 - name: DATABASE_URL
-  value: postgres://posthog:$(PGPASSWORD)@$(PGHOST):{{ if eq .Values.postgres.type "external" }}{{ .Values.postgres.external.port }}{{ else }}5432{{ end }}/posthog
-{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslMode }}
-- name: POSTHOG_POSTGRES_SSL_MODE
-  value: {{ .Values.postgres.external.sslMode | quote }}
+  value: "postgres://posthog:$(PGPASSWORD)@$(PGHOST):$(PGPORT)/posthog"
+{{- if eq .Values.postgres.type "external" }}
+{{- if include "posthog.hasValue" .Values.postgres.external.sslMode }}
+{{ include "posthog.envValue" (dict "name" "POSTHOG_POSTGRES_SSL_MODE" "value" .Values.postgres.external.sslMode) }}
 {{- end }}
-{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslCa }}
-- name: POSTHOG_POSTGRES_CLI_SSL_CA
-  value: {{ .Values.postgres.external.sslCa | quote }}
+{{- if include "posthog.hasValue" .Values.postgres.external.sslCa }}
+{{ include "posthog.envValue" (dict "name" "POSTHOG_POSTGRES_CLI_SSL_CA" "value" .Values.postgres.external.sslCa) }}
 {{- end }}
-{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslCert }}
-- name: POSTHOG_POSTGRES_CLI_SSL_CRT
-  value: {{ .Values.postgres.external.sslCert | quote }}
+{{- if include "posthog.hasValue" .Values.postgres.external.sslCert }}
+{{ include "posthog.envValue" (dict "name" "POSTHOG_POSTGRES_CLI_SSL_CRT" "value" .Values.postgres.external.sslCert) }}
 {{- end }}
-{{- if and (eq .Values.postgres.type "external") .Values.postgres.external.sslKey }}
-- name: POSTHOG_POSTGRES_CLI_SSL_KEY
-  value: {{ .Values.postgres.external.sslKey | quote }}
+{{- if include "posthog.hasValue" .Values.postgres.external.sslKey }}
+{{ include "posthog.envValue" (dict "name" "POSTHOG_POSTGRES_CLI_SSL_KEY" "value" .Values.postgres.external.sslKey) }}
 {{- end }}
+{{- end }}
+{{- if eq .Values.clickhouse.type "external" }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_HOST" "value" .Values.clickhouse.external.host) }}
+{{- else }}
 - name: CLICKHOUSE_HOST
-  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.host }}{{ else }}{{ include "posthog.fullname" . }}-clickhouse{{ end }}
+  value: {{ include "posthog.fullname" . }}-clickhouse
+{{- end }}
 - name: CLICKHOUSE_DATABASE
   value: posthog
+{{- if eq .Values.clickhouse.type "external" }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_SECURE" "value" .Values.clickhouse.external.secure) }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_VERIFY" "value" .Values.clickhouse.external.verify) }}
+{{- else }}
 - name: CLICKHOUSE_SECURE
-  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.secure | quote }}{{ else }}"false"{{ end }}
+  value: "false"
 - name: CLICKHOUSE_VERIFY
-  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.verify | quote }}{{ else }}"false"{{ end }}
+  value: "false"
+{{- end }}
 - name: CLICKHOUSE_API_USER
   value: api
+{{- if include "posthog.hasValue" .Values.clickhouse.apiPassword }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_API_PASSWORD" "value" .Values.clickhouse.apiPassword) }}
+{{- else }}
 - name: CLICKHOUSE_API_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: clickhouse-api-password
+{{- end }}
 - name: CLICKHOUSE_APP_USER
   value: app
+{{- if include "posthog.hasValue" .Values.clickhouse.appPassword }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_APP_PASSWORD" "value" .Values.clickhouse.appPassword) }}
+{{- else }}
 - name: CLICKHOUSE_APP_PASSWORD
   valueFrom:
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: clickhouse-app-password
+{{- end }}
 - name: CLICKHOUSE_LOGS_CLUSTER_HOST
-  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.host }}{{ else }}{{ include "posthog.fullname" . }}-clickhouse{{ end }}
+  value: {{ if eq .Values.clickhouse.type "external" }}$(CLICKHOUSE_HOST){{ else }}{{ include "posthog.fullname" . }}-clickhouse{{ end }}
 - name: CLICKHOUSE_LOGS_CLUSTER_PORT
   value: "9000"
 - name: CLICKHOUSE_LOGS_CLUSTER_SECURE
   value: "false"
+{{- if eq .Values.redis.type "external" }}
+{{ include "posthog.envValue" (dict "name" "REDIS_URL" "value" .Values.redis.external.url) }}
+{{- else }}
 - name: REDIS_URL
-  value: {{ if eq .Values.redis.type "external" }}{{ .Values.redis.external.url }}{{ else }}redis://{{ include "posthog.fullname" . }}-redis:6379/{{ end }}
+  value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+{{- end }}
+{{- if eq .Values.kafka.type "external" }}
+{{ include "posthog.envValue" (dict "name" "KAFKA_HOSTS" "value" .Values.kafka.external.hosts) }}
+{{- else }}
 - name: KAFKA_HOSTS
-  value: {{ if eq .Values.kafka.type "external" }}{{ .Values.kafka.external.hosts }}{{ else }}{{ include "posthog.fullname" . }}-kafka:9092{{ end }}
-{{- /* Node.js rdkafka has per-producer/consumer broker defaults hardcoded to 'kafka:9092'. */}}
-{{- /* Each producer type reads KAFKA_<TYPE>_METADATA_BROKER_LIST from process.env. */}}
-{{- $kafkaBrokers := (ternary .Values.kafka.external.hosts (printf "%s-kafka:9092" (include "posthog.fullname" .)) (eq .Values.kafka.type "external")) }}
-- name: KAFKA_CONSUMER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_METRICS_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_MONITORING_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_CDP_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_WARPSTREAM_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_INGESTION_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
-- name: KAFKA_WAREHOUSE_PRODUCER_METADATA_BROKER_LIST
-  value: {{ $kafkaBrokers }}
+  value: {{ include "posthog.fullname" . }}-kafka:9092
+{{- end }}
+{{- range list "KAFKA_CONSUMER_METADATA_BROKER_LIST" "KAFKA_PRODUCER_METADATA_BROKER_LIST" "KAFKA_METRICS_PRODUCER_METADATA_BROKER_LIST" "KAFKA_MONITORING_PRODUCER_METADATA_BROKER_LIST" "KAFKA_CDP_PRODUCER_METADATA_BROKER_LIST" "KAFKA_WARPSTREAM_PRODUCER_METADATA_BROKER_LIST" "KAFKA_INGESTION_PRODUCER_METADATA_BROKER_LIST" "KAFKA_WAREHOUSE_PRODUCER_METADATA_BROKER_LIST" }}
+- name: {{ . }}
+  value: "$(KAFKA_HOSTS)"
+{{- end }}
 {{- if eq .Values.objectStorage.type "external" }}
-- name: OBJECT_STORAGE_ENDPOINT
-  value: {{ .Values.objectStorage.external.endpoint | quote }}
+{{ include "posthog.envValue" (dict "name" "OBJECT_STORAGE_ENDPOINT" "value" .Values.objectStorage.external.endpoint) }}
 {{- else }}
 - name: OBJECT_STORAGE_ENDPOINT
   value: http://{{ include "posthog.fullname" . }}-seaweedfs:8333
 {{- end }}
 - name: OBJECT_STORAGE_PUBLIC_ENDPOINT
   value: {{ include "posthog.siteUrl" . }}
+{{- if include "posthog.hasValue" .Values.objectStorage.accessKeyId }}
+{{ include "posthog.envValue" (dict "name" "OBJECT_STORAGE_ACCESS_KEY_ID" "value" .Values.objectStorage.accessKeyId) }}
+{{ include "posthog.envValue" (dict "name" "OBJECT_STORAGE_SECRET_ACCESS_KEY" "value" .Values.objectStorage.secretAccessKey) }}
+{{- else }}
 - name: OBJECT_STORAGE_ACCESS_KEY_ID
   valueFrom:
     secretKeyRef:
@@ -191,235 +302,143 @@ Common environment variables shared by most PostHog services.
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: s3-secret-access-key
+{{- end }}
 - name: OBJECT_STORAGE_ENABLED
   value: "true"
-{{- if eq .Values.objectStorage.type "external" }}
 - name: SESSION_RECORDING_V2_S3_ENDPOINT
-  value: {{ .Values.objectStorage.external.endpoint | quote }}
-{{- else }}
-- name: SESSION_RECORDING_V2_S3_ENDPOINT
-  value: http://{{ include "posthog.fullname" . }}-seaweedfs:8333
-{{- end }}
+  value: "$(OBJECT_STORAGE_ENDPOINT)"
 - name: SESSION_RECORDING_V2_S3_ACCESS_KEY_ID
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: s3-access-key-id
+  value: "$(OBJECT_STORAGE_ACCESS_KEY_ID)"
 - name: SESSION_RECORDING_V2_S3_SECRET_ACCESS_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: s3-secret-access-key
+  value: "$(OBJECT_STORAGE_SECRET_ACCESS_KEY)"
 - name: SITE_URL
   value: {{ include "posthog.siteUrl" . }}
+{{- if include "posthog.hasValue" .Values.secretKey }}
+{{ include "posthog.envValue" (dict "name" "SECRET_KEY" "value" .Values.secretKey) }}
+{{- else }}
 - name: SECRET_KEY
   valueFrom:
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: posthog-secret
+{{- end }}
+{{- if include "posthog.hasValue" .Values.encryptionSaltKeys }}
+{{ include "posthog.envValue" (dict "name" "ENCRYPTION_SALT_KEYS" "value" .Values.encryptionSaltKeys) }}
+{{- else }}
 - name: ENCRYPTION_SALT_KEYS
   valueFrom:
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: encryption-salt-keys
+{{- end }}
 - name: DEPLOYMENT
   value: hobby
 - name: IS_BEHIND_PROXY
   value: "true"
 - name: DISABLE_SECURE_SSL_REDIRECT
   value: "true"
-- name: SECURE_COOKIES
-  value: {{ .Values.secureCookies | quote }}
-- name: OPT_OUT_CAPTURE
-  value: {{ .Values.optOutCapture | quote }}
 - name: OTEL_SDK_DISABLED
   value: "true"
 - name: OTEL_EXPORTER_OTLP_ENDPOINT
   value: ""
-- name: MULTI_ORG_ENABLED
-  value: {{ .Values.multiOrgEnabled | quote }}
-- name: DISABLE_PAID_FEATURE_SHOWCASING
-  value: {{ .Values.disablePaidFeatureShowcasing | quote }}
-- name: CAPTURE_INTERNAL_METRICS
-  value: {{ .Values.captureInternalMetrics | quote }}
-- name: ASYNC_EVENT_ACTION_MAPPING
-  value: {{ .Values.asyncEventActionMapping | quote }}
-- name: ACTION_EVENT_MAPPING_INTERVAL_SECONDS
-  value: {{ .Values.actionEventMappingIntervalSeconds | quote }}
-- name: DEBUG_QUERIES
-  value: {{ .Values.debugQueries | quote }}
-- name: CLICKHOUSE_DISABLE_EXTERNAL_SCHEMAS
-  value: {{ .Values.clickhouseDisableExternalSchemas | quote }}
-- name: LOG_LEVEL
-  value: {{ .Values.logLevel | quote }}
-- name: MATERIALIZE_COLUMNS_ANALYSIS_PERIOD_HOURS
-  value: {{ .Values.materializeColumnsAnalysisPeriodHours | quote }}
-- name: MATERIALIZE_COLUMNS_BACKFILL_PERIOD_DAYS
-  value: {{ .Values.materializeColumnsBackfillPeriodDays | quote }}
-- name: MATERIALIZE_COLUMNS_MAX_AT_ONCE
-  value: {{ .Values.materializeColumnsMaxAtOnce | quote }}
-- name: MATERIALIZE_COLUMNS_MINIMUM_QUERY_TIME
-  value: {{ .Values.materializeColumnsMinimumQueryTime | quote }}
-- name: MATERIALIZE_COLUMNS_SCHEDULE_CRON
-  value: {{ .Values.materializeColumnsScheduleCron | quote }}
-- name: TEAM_NEGATIVE_CACHE_CAPACITY
-  value: {{ .Values.teamNegativeCacheCapacity | quote }}
-- name: TEAM_NEGATIVE_CACHE_TTL_SECONDS
-  value: {{ .Values.teamNegativeCacheTtlSeconds | quote }}
-- name: CLEAR_CLICKHOUSE_REMOVED_DATA_SCHEDULE_CRON
-  value: {{ .Values.clearClickhouseRemovedDataScheduleCron | quote }}
-{{- if .Values.sessionRecordingV2MetadataSwitchover }}
-- name: SESSION_RECORDING_V2_METADATA_SWITCHOVER
-  value: {{ .Values.sessionRecordingV2MetadataSwitchover | quote }}
+{{ include "posthog.envValue" (dict "name" "SECURE_COOKIES" "value" .Values.secureCookies) }}
+{{ include "posthog.envValue" (dict "name" "OPT_OUT_CAPTURE" "value" .Values.optOutCapture) }}
+{{ include "posthog.envValue" (dict "name" "MULTI_ORG_ENABLED" "value" .Values.multiOrgEnabled) }}
+{{ include "posthog.envValue" (dict "name" "DISABLE_PAID_FEATURE_SHOWCASING" "value" .Values.disablePaidFeatureShowcasing) }}
+{{ include "posthog.envValue" (dict "name" "CAPTURE_INTERNAL_METRICS" "value" .Values.captureInternalMetrics) }}
+{{ include "posthog.envValue" (dict "name" "ASYNC_EVENT_ACTION_MAPPING" "value" .Values.asyncEventActionMapping) }}
+{{ include "posthog.envValue" (dict "name" "ACTION_EVENT_MAPPING_INTERVAL_SECONDS" "value" .Values.actionEventMappingIntervalSeconds) }}
+{{ include "posthog.envValue" (dict "name" "DEBUG_QUERIES" "value" .Values.debugQueries) }}
+{{ include "posthog.envValue" (dict "name" "CLICKHOUSE_DISABLE_EXTERNAL_SCHEMAS" "value" .Values.clickhouseDisableExternalSchemas) }}
+{{ include "posthog.envValue" (dict "name" "LOG_LEVEL" "value" .Values.logLevel) }}
+{{ include "posthog.envValue" (dict "name" "MATERIALIZE_COLUMNS_ANALYSIS_PERIOD_HOURS" "value" .Values.materializeColumnsAnalysisPeriodHours) }}
+{{ include "posthog.envValue" (dict "name" "MATERIALIZE_COLUMNS_BACKFILL_PERIOD_DAYS" "value" .Values.materializeColumnsBackfillPeriodDays) }}
+{{ include "posthog.envValue" (dict "name" "MATERIALIZE_COLUMNS_MAX_AT_ONCE" "value" .Values.materializeColumnsMaxAtOnce) }}
+{{ include "posthog.envValue" (dict "name" "MATERIALIZE_COLUMNS_MINIMUM_QUERY_TIME" "value" .Values.materializeColumnsMinimumQueryTime) }}
+{{ include "posthog.envValue" (dict "name" "MATERIALIZE_COLUMNS_SCHEDULE_CRON" "value" .Values.materializeColumnsScheduleCron) }}
+{{ include "posthog.envValue" (dict "name" "TEAM_NEGATIVE_CACHE_CAPACITY" "value" .Values.teamNegativeCacheCapacity) }}
+{{ include "posthog.envValue" (dict "name" "TEAM_NEGATIVE_CACHE_TTL_SECONDS" "value" .Values.teamNegativeCacheTtlSeconds) }}
+{{ include "posthog.envValue" (dict "name" "CLEAR_CLICKHOUSE_REMOVED_DATA_SCHEDULE_CRON" "value" .Values.clearClickhouseRemovedDataScheduleCron) }}
+{{- if include "posthog.hasValue" .Values.sessionRecordingV2MetadataSwitchover }}
+{{ include "posthog.envValue" (dict "name" "SESSION_RECORDING_V2_METADATA_SWITCHOVER" "value" .Values.sessionRecordingV2MetadataSwitchover) }}
 {{- end }}
-{{- if .Values.allowedIpBlocks }}
-- name: ALLOWED_IP_BLOCKS
-  value: {{ .Values.allowedIpBlocks | quote }}
+{{- if include "posthog.hasValue" .Values.allowedIpBlocks }}
+{{ include "posthog.envValue" (dict "name" "ALLOWED_IP_BLOCKS" "value" .Values.allowedIpBlocks) }}
 {{- end }}
-{{- if .Values.trustedProxies }}
-- name: TRUSTED_PROXIES
-  value: {{ .Values.trustedProxies | quote }}
+{{- if include "posthog.hasValue" .Values.trustedProxies }}
+{{ include "posthog.envValue" (dict "name" "TRUSTED_PROXIES" "value" .Values.trustedProxies) }}
 {{- end }}
-{{- if .Values.trustAllProxies }}
-- name: TRUST_ALL_PROXIES
-  value: "true"
-{{- end }}
-- name: ALLOWED_HOSTS
-  value: {{ .Values.allowedHosts | quote }}
-{{- if .Values.sso.github.enabled }}
-- name: SOCIAL_AUTH_GITHUB_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: github-oauth-key
-- name: SOCIAL_AUTH_GITHUB_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: github-oauth-secret
-{{- end }}
-{{- if .Values.sso.gitlab.enabled }}
-- name: SOCIAL_AUTH_GITLAB_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: gitlab-oauth-key
-- name: SOCIAL_AUTH_GITLAB_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: gitlab-oauth-secret
-- name: SOCIAL_AUTH_GITLAB_API_URL
-  value: {{ .Values.sso.gitlab.apiUrl | quote }}
-{{- end }}
-{{- if .Values.sso.google.enabled }}
-- name: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: google-oauth-key
-- name: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: google-oauth-secret
-{{- end }}
-{{- if .Values.sso.oidc.enabled }}
-- name: SOCIAL_AUTH_OIDC_OIDC_ENDPOINT
-  value: {{ .Values.sso.oidc.endpoint | quote }}
-- name: SOCIAL_AUTH_OIDC_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: oidc-client-id
-- name: SOCIAL_AUTH_OIDC_SECRET
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "posthog.secretName" . }}
-      key: oidc-client-secret
-{{- if .Values.sso.oidc.iconUrl }}
-- name: SOCIAL_AUTH_OIDC_ICON_URL
-  value: {{ .Values.sso.oidc.iconUrl | quote }}
-{{- end }}
-{{- if .Values.sso.oidc.displayName }}
-- name: SOCIAL_AUTH_OIDC_DISPLAY_NAME
-  value: {{ .Values.sso.oidc.displayName | quote }}
-{{- end }}
-{{- end }}
-{{- if .Values.auth.disablePasswordLogin }}
-- name: DISABLE_PASSWORD_LOGIN
-  value: "true"
-{{- end }}
-{{- if .Values.auth.disablePasskeyLogin }}
-- name: DISABLE_PASSKEY_LOGIN
-  value: "true"
-{{- end }}
-{{- if .Values.email.enabled }}
+{{ include "posthog.envValue" (dict "name" "TRUST_ALL_PROXIES" "value" .Values.trustAllProxies) }}
+{{ include "posthog.envValue" (dict "name" "ALLOWED_HOSTS" "value" .Values.allowedHosts) }}
+{{ include "posthog.envValue" (dict "name" "DISABLE_PASSWORD_LOGIN" "value" .Values.auth.disablePasswordLogin) }}
+{{ include "posthog.envValue" (dict "name" "DISABLE_PASSKEY_LOGIN" "value" .Values.auth.disablePasskeyLogin) }}
+{{- if include "posthog.hasValue" .Values.sso.github.key }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITHUB_KEY" "value" .Values.sso.github.key) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITHUB_SECRET" "value" .Values.sso.github.secret) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.sso.gitlab.key }}
+{{- include "posthog.requireNonEmpty" (dict "section" "sso.gitlab" "fields" (dict "apiUrl" .Values.sso.gitlab.apiUrl)) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITLAB_KEY" "value" .Values.sso.gitlab.key) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITLAB_SECRET" "value" .Values.sso.gitlab.secret) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITLAB_API_URL" "value" .Values.sso.gitlab.apiUrl) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.sso.google.key }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY" "value" .Values.sso.google.key) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET" "value" .Values.sso.google.secret) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.sso.oidc.key }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_OIDC_ENDPOINT" "value" .Values.sso.oidc.endpoint) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_KEY" "value" .Values.sso.oidc.key) }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_SECRET" "value" .Values.sso.oidc.secret) }}
+{{- if include "posthog.hasValue" .Values.sso.oidc.iconUrl }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_ICON_URL" "value" .Values.sso.oidc.iconUrl) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.sso.oidc.displayName }}
+{{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_DISPLAY_NAME" "value" .Values.sso.oidc.displayName) }}
+{{ end }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.email.host }}
+{{- include "posthog.requireNonEmpty" (dict "section" "email" "fields" (dict "port" .Values.email.port "useTLS" .Values.email.useTLS "useSSL" .Values.email.useSSL)) }}
 - name: EMAIL_ENABLED
   value: "true"
-- name: EMAIL_HOST
-  value: {{ .Values.email.host | quote }}
-- name: EMAIL_PORT
-  value: {{ .Values.email.port | quote }}
-{{- if .Values.email.user }}
-- name: EMAIL_HOST_USER
-  value: {{ .Values.email.user | quote }}
-{{- end }}
-{{- if .Values.email.password }}
-- name: EMAIL_HOST_PASSWORD
-  value: {{ .Values.email.password | quote }}
-{{- end }}
-- name: EMAIL_USE_TLS
-  value: {{ .Values.email.useTls | quote }}
-- name: EMAIL_USE_SSL
-  value: {{ .Values.email.useSsl | quote }}
-{{- if .Values.email.defaultFrom }}
-- name: EMAIL_DEFAULT_FROM
-  value: {{ .Values.email.defaultFrom | quote }}
-{{- end }}
-{{- end }}
-{{- if .Values.slack.clientId }}
-- name: SLACK_APP_CLIENT_ID
-  value: {{ .Values.slack.clientId | quote }}
-- name: SLACK_APP_CLIENT_SECRET
-  value: {{ .Values.slack.clientSecret | quote }}
-- name: SLACK_APP_SIGNING_SECRET
-  value: {{ .Values.slack.signingSecret | quote }}
-{{- end }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_HOST" "value" .Values.email.host) }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_PORT" "value" .Values.email.port) }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_HOST_USER" "value" .Values.email.user) }}
+{{- if include "posthog.hasValue" .Values.email.password }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_HOST_PASSWORD" "value" .Values.email.password) }}
+{{ end }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_USE_TLS" "value" .Values.email.useTLS) }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_USE_SSL" "value" .Values.email.useSSL) }}
+{{- if include "posthog.hasValue" .Values.email.defaultFrom }}
+{{ include "posthog.envValue" (dict "name" "EMAIL_DEFAULT_FROM" "value" .Values.email.defaultFrom) }}
+{{ end }}
+{{ end }}
 - name: TEMPORAL_HOST
   value: {{ include "posthog.fullname" . }}-temporal
-- name: SKIP_SERVICE_VERSION_REQUIREMENTS
-  value: {{ .Values.skipServiceVersionRequirements | quote }}
-{{- if .Values.jsUrl }}
-- name: JS_URL
-  value: {{ .Values.jsUrl | quote }}
-{{- end }}
-{{- if .Values.kafkaUrlForClickhouse }}
-- name: KAFKA_URL_FOR_CLICKHOUSE
-  value: {{ .Values.kafkaUrlForClickhouse | quote }}
-{{- end }}
-{{- if .Values.statsd.host }}
-- name: STATSD_HOST
-  value: {{ .Values.statsd.host | quote }}
-- name: STATSD_PORT
-  value: {{ .Values.statsd.port | quote }}
-{{- if .Values.statsd.prefix }}
-- name: STATSD_PREFIX
-  value: {{ .Values.statsd.prefix | quote }}
-{{- end }}
-{{- end }}
-{{- if .Values.workosRadar.enabled }}
+{{ include "posthog.envValue" (dict "name" "SKIP_SERVICE_VERSION_REQUIREMENTS" "value" .Values.skipServiceVersionRequirements) }}
+{{- if include "posthog.hasValue" .Values.jsUrl }}
+{{ include "posthog.envValue" (dict "name" "JS_URL" "value" .Values.jsUrl) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.kafkaUrlForClickhouse }}
+{{ include "posthog.envValue" (dict "name" "KAFKA_URL_FOR_CLICKHOUSE" "value" .Values.kafkaUrlForClickhouse) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.statsd.host }}
+{{- include "posthog.requireNonEmpty" (dict "section" "statsd" "fields" (dict "port" .Values.statsd.port)) }}
+{{ include "posthog.envValue" (dict "name" "STATSD_HOST" "value" .Values.statsd.host) }}
+{{ include "posthog.envValue" (dict "name" "STATSD_PORT" "value" .Values.statsd.port) }}
+{{- if include "posthog.hasValue" .Values.statsd.prefix }}
+{{ include "posthog.envValue" (dict "name" "STATSD_PREFIX" "value" .Values.statsd.prefix) }}
+{{ end }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.workosRadar.apiKey }}
 - name: WORKOS_RADAR_ENABLED
   value: "true"
-- name: WORKOS_RADAR_API_KEY
-  value: {{ .Values.workosRadar.apiKey | quote }}
-{{- end }}
-{{- if .Values.cloudflareTurnstile.siteKey }}
-- name: CLOUDFLARE_TURNSTILE_SITE_KEY
-  value: {{ .Values.cloudflareTurnstile.siteKey | quote }}
-- name: CLOUDFLARE_TURNSTILE_SECRET_KEY
-  value: {{ .Values.cloudflareTurnstile.secretKey | quote }}
-{{- end }}
+{{ include "posthog.envValue" (dict "name" "WORKOS_RADAR_API_KEY" "value" .Values.workosRadar.apiKey) }}
+{{ end }}
+{{- if include "posthog.hasValue" .Values.cloudflareTurnstile.siteKey }}
+{{ include "posthog.envValue" (dict "name" "CLOUDFLARE_TURNSTILE_SITE_KEY" "value" .Values.cloudflareTurnstile.siteKey) }}
+{{ include "posthog.envValue" (dict "name" "CLOUDFLARE_TURNSTILE_SECRET_KEY" "value" .Values.cloudflareTurnstile.secretKey) }}
+{{ end }}
 {{- end }}
 
 {{/*

@@ -1,7 +1,29 @@
+# =============================================================================
+# Values pattern
+# =============================================================================
+# All values that map to environment variables accept two forms:
+#   String: rendered as a literal env var value
+#     email:
+#       host: "smtp.example.com"
+#   Map:    rendered as-is into the Kubernetes env spec (typically valueFrom)
+#     email:
+#       host:
+#         valueFrom:
+#           secretKeyRef:
+#             name: my-secret
+#             key: smtp-host
+#
+# Non-string/non-map values (bare integers, booleans) cause a template error.
+# Wrap numeric and boolean values in quotes: port: "587", useTLS: "true".
+#
+# Sections activate when their trigger fields are set. Partial configs fail
+# with a clear error at template time (helm template / helm install --dry-run).
+# =============================================================================
+
 # Domain and TLS
 domain: posthog.example.com
 siteUrl: ""  # defaults to https://<domain>, override for http testing
-secureCookies: true  # set false when not behind TLS
+secureCookies: "true"  # set "false" when not behind TLS
 
 # Secrets
 # - create: true → chart auto-generates a Secret with crypto-secure random values
@@ -74,38 +96,47 @@ images:
     repository: temporalio/ui
     tag: "2.47.2"
 
+# Infrastructure secret overrides
+# Leave empty to use auto-generated values from the chart Secret.
+# Provide a string or secretKeyRef map to override.
+secretKey: ""             # PostHog secret key (SECRET_KEY)
+encryptionSaltKeys: ""    # Encryption salt (ENCRYPTION_SALT_KEYS)
+
 # SSO / Social Auth
-# Enable each provider and provide credentials via the Secret resource
-# Secret keys: github-oauth-key, github-oauth-secret, gitlab-oauth-key, etc.
+# Provide credentials directly or via secretKeyRef maps.
+# Each provider activates when its trigger fields are set.
 sso:
   github:
-    enabled: false
+    key: ""       # OAuth client ID
+    secret: ""    # OAuth client secret
   gitlab:
-    enabled: false
     apiUrl: "https://gitlab.com"
+    key: ""
+    secret: ""
   google:
-    enabled: false
+    key: ""
+    secret: ""
   oidc:
-    enabled: false
-    endpoint: ""  # e.g. https://accounts.google.com
+    endpoint: ""      # e.g. https://accounts.google.com
+    key: ""           # OIDC client ID
+    secret: ""        # OIDC client secret
     iconUrl: ""       # URL to a custom icon for the OIDC login button
-    displayName: ""   # custom label for the OIDC button (default: "OpenID Connect")
+    displayName: ""   # custom label for the OIDC button
 
-# Email (also configurable via PostHog UI at /instance/settings)
+# Email — activates when host + user are set
 email:
-  enabled: false
   host: ""
-  port: 587
+  port: "587"
   user: ""
-  password: ""
-  useTls: true
-  useSsl: false
-  defaultFrom: ""
+  password: ""        # optional (some SMTP uses IP allowlisting)
+  useTLS: "true"
+  useSSL: "false"
+  defaultFrom: ""     # optional
 
 # Authentication controls
 auth:
-  disablePasswordLogin: false
-  disablePasskeyLogin: false
+  disablePasswordLogin: "false"
+  disablePasskeyLogin: "false"
 
 # Slack integration (also configurable via PostHog UI)
 slack:
@@ -114,12 +145,12 @@ slack:
   signingSecret: ""
 
 # Multi-tenancy
-multiOrgEnabled: false
+multiOrgEnabled: "false"
 
 # Security / Proxy
 allowedIpBlocks: ""
 trustedProxies: ""
-trustAllProxies: false
+trustAllProxies: "false"
 allowedHosts: "*"
 
 # App tokens (for installing private plugins/apps)
@@ -130,44 +161,43 @@ appTokens:
   npm: false
 
 # Feature flags cache
-teamNegativeCacheCapacity: 10000
-teamNegativeCacheTtlSeconds: 300
+teamNegativeCacheCapacity: "10000"
+teamNegativeCacheTtlSeconds: "300"
 
 # ClickHouse tuning
-debugQueries: false
-clickhouseDisableExternalSchemas: false
+debugQueries: "false"
+clickhouseDisableExternalSchemas: "false"
 
 # Materialized columns
-materializeColumnsAnalysisPeriodHours: 168
-materializeColumnsBackfillPeriodDays: 90
-materializeColumnsMaxAtOnce: 10
-materializeColumnsMinimumQueryTime: 3000
+materializeColumnsAnalysisPeriodHours: "168"
+materializeColumnsBackfillPeriodDays: "90"
+materializeColumnsMaxAtOnce: "10"
+materializeColumnsMinimumQueryTime: "3000"
 materializeColumnsScheduleCron: "0 5 * * SAT"
 
 # Misc
-disablePaidFeatureShowcasing: false
-captureInternalMetrics: false
-asyncEventActionMapping: false
-actionEventMappingIntervalSeconds: 300
+disablePaidFeatureShowcasing: "false"
+captureInternalMetrics: "false"
+asyncEventActionMapping: "false"
+actionEventMappingIntervalSeconds: "300"
 clearClickhouseRemovedDataScheduleCron: "0 5 * * SAT"
 logLevel: "info"
-skipServiceVersionRequirements: false
+skipServiceVersionRequirements: "false"
 jsUrl: ""  # URL for loading frontend assets; leave empty for default
 
 kafkaUrlForClickhouse: ""   # ClickHouse-specific Kafka address; falls back to main Kafka
 
-# StatsD metrics
+# StatsD metrics — activates when host is set
 statsd:
   host: ""
-  port: 8125
+  port: "8125"
   prefix: ""
 
-# Bot/fraud detection
+# Bot/fraud detection — activates when apiKey is set
 workosRadar:
-  enabled: false
   apiKey: ""
 
-# Signup CAPTCHA
+# Signup CAPTCHA — siteKey and secretKey required together
 cloudflareTurnstile:
   siteKey: ""
   secretKey: ""
@@ -183,9 +213,10 @@ sessionRecordingV2MetadataSwitchover: ""
 # PostgreSQL
 postgres:
   type: internal  # "internal" = deploy StatefulSet, "external" = bring your own
+  password: ""    # override chart-generated password (string or secretKeyRef map)
   external:
     host: ""
-    port: 5432
+    port: "5432"
     sslMode: ""      # require, verify-ca, verify-full
     sslCa: ""        # path to CA cert inside container
     sslCert: ""      # path to client cert
@@ -206,12 +237,14 @@ redis:
 # ClickHouse
 clickhouse:
   type: internal
+  apiPassword: ""   # override chart-generated API password
+  appPassword: ""   # override chart-generated app password
   external:
     host: ""
-    httpPort: 8123
-    nativePort: 9000
-    secure: false
-    verify: false
+    httpPort: "8123"
+    nativePort: "9000"
+    secure: "false"
+    verify: "false"
   persistence:
     size: 20Gi
     storageClass: ""
@@ -228,6 +261,8 @@ kafka:
 # Object storage (S3-compatible)
 objectStorage:
   type: internal     # "internal" = deploy SeaweedFS, "external" = bring your own S3
+  accessKeyId: ""    # override chart-generated S3 access key
+  secretAccessKey: ""  # override chart-generated S3 secret key (required with accessKeyId)
   external:
     endpoint: ""     # e.g. https://s3.amazonaws.com
     region: ""
@@ -266,7 +301,7 @@ tolerations: []
 nodeSelector: {}
 
 # Telemetry
-optOutCapture: true
+optOutCapture: "true"
 
 # Ingress
 ingress:
