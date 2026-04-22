@@ -230,17 +230,6 @@ The web pod runs database migrations automatically before starting the server. R
 
 Email (SMTP), Slack integration, SSO providers, and other instance-level settings can be configured either via `values.yaml` (recommended for GitOps) or at runtime in the PostHog UI at `/instance/settings` (requires staff user). Chart-level configuration takes precedence.
 
-## Docker Compose (local testing)
-
-A `docker-compose.yml` is included for local testing outside of Kubernetes:
-
-```bash
-cp .env.example .env  # edit domain and secrets
-docker compose build  # builds custom ClickHouse image
-docker compose up -d  # starts all services
-# Visit http://localhost:8000
-```
-
 ## Environment variables
 
 All [PostHog environment variables](https://posthog.com/docs/self-host/configure/environment-variables) are supported as first-class values in `values.yaml`. See the values file for the full list.
