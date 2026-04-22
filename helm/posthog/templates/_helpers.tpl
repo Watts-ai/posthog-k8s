@@ -1,4 +1,10 @@
 {{/*
+Pinned PostHog app image commits — update these when bumping versions.
+*/}}
+{{- define "posthog.upstreamCommit" -}}738b8b39bf26cdd6df530ec59cfbf261ff27788c{{- end -}}
+{{- define "posthog.wattsCommit" -}}b5321ca7b29220a7dcbf1055d231432246a1bcc3{{- end -}}
+
+{{/*
 Chart name.
 */}}
 {{- define "posthog.name" -}}
@@ -33,9 +39,26 @@ app.kubernetes.io/component: {{ .component }}
 
 {{/*
 PostHog app image (Python/Django).
+Variant-specific defaults; explicit values.images.posthog overrides always win.
 */}}
 {{- define "posthog.image" -}}
-{{ .Values.images.posthog.repository }}:{{ .Values.images.posthog.tag }}
+{{- $repo := .Values.images.posthog.repository -}}
+{{- $tag := .Values.images.posthog.tag -}}
+{{- if not (include "posthog.hasValue" $repo) -}}
+  {{- if eq .Values.variant "watts" -}}
+    {{- $repo = "ghcr.io/watts-ai/posthog/posthog" -}}
+  {{- else -}}
+    {{- $repo = "posthog/posthog" -}}
+  {{- end -}}
+{{- end -}}
+{{- if not (include "posthog.hasValue" $tag) -}}
+  {{- if eq .Values.variant "watts" -}}
+    {{- $tag = printf "watts-%s" (include "posthog.wattsCommit" .) -}}
+  {{- else -}}
+    {{- $tag = include "posthog.upstreamCommit" . -}}
+  {{- end -}}
+{{- end -}}
+{{ $repo }}:{{ $tag }}
 {{- end }}
 
 {{/*
@@ -169,17 +192,45 @@ Usage: {{ include "posthog.requireGate" (dict "section" "email" "gateName" "host
 {{- end -}}
 
 {{/*
+Validate variant and gate fork-specific features.
+*/}}
+{{- define "posthog.validateVariant" -}}
+{{- $valid := list "watts" "upstream" -}}
+{{- if not (has .Values.variant $valid) -}}
+  {{- fail (printf "variant must be one of [%s], got %q" (join ", " $valid) .Values.variant) -}}
+{{- end -}}
+{{- if eq .Values.variant "upstream" -}}
+  {{- if include "posthog.hasValue" .Values.sso.oidc.key -}}
+    {{- fail "sso.oidc requires variant: \"watts\". OIDC SSO is a fork-specific feature not available in upstream PostHog." -}}
+  {{- end -}}
+  {{- if not (kindIs "string" .Values.auth.disablePasswordLogin) -}}
+    {{- fail "auth.disablePasswordLogin must be a string, got bool. Wrap the value in quotes." -}}
+  {{- else if ne .Values.auth.disablePasswordLogin "false" -}}
+    {{- fail "auth.disablePasswordLogin requires variant: \"watts\". Password login control is a fork-specific feature." -}}
+  {{- end -}}
+  {{- if not (kindIs "string" .Values.auth.disablePasskeyLogin) -}}
+    {{- fail "auth.disablePasskeyLogin must be a string, got bool. Wrap the value in quotes." -}}
+  {{- else if ne .Values.auth.disablePasskeyLogin "false" -}}
+    {{- fail "auth.disablePasskeyLogin requires variant: \"watts\". Passkey login control is a fork-specific feature." -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Common environment variables shared by most PostHog services.
 */}}
 {{- define "posthog.commonEnv" -}}
+{{- include "posthog.validateVariant" . -}}
 {{- include "posthog.requireTogether" (dict "section" "email" "fields" (dict "host" .Values.email.host "user" .Values.email.user)) -}}
 {{- include "posthog.requireGate" (dict "section" "email" "gateName" "host" "gate" .Values.email.host "fields" (dict "password" .Values.email.password "defaultFrom" .Values.email.defaultFrom)) -}}
 {{- include "posthog.requireTogether" (dict "section" "slack" "fields" (dict "clientId" .Values.slack.clientId "clientSecret" .Values.slack.clientSecret "signingSecret" .Values.slack.signingSecret)) -}}
 {{- include "posthog.requireTogether" (dict "section" "sso.github" "fields" (dict "key" .Values.sso.github.key "secret" .Values.sso.github.secret)) -}}
 {{- include "posthog.requireTogether" (dict "section" "sso.gitlab" "fields" (dict "key" .Values.sso.gitlab.key "secret" .Values.sso.gitlab.secret)) -}}
 {{- include "posthog.requireTogether" (dict "section" "sso.google" "fields" (dict "key" .Values.sso.google.key "secret" .Values.sso.google.secret)) -}}
+{{- if eq .Values.variant "watts" -}}
 {{- include "posthog.requireTogether" (dict "section" "sso.oidc" "fields" (dict "key" .Values.sso.oidc.key "secret" .Values.sso.oidc.secret "endpoint" .Values.sso.oidc.endpoint)) -}}
 {{- include "posthog.requireGate" (dict "section" "sso.oidc" "gateName" "key" "gate" .Values.sso.oidc.key "fields" (dict "iconUrl" .Values.sso.oidc.iconUrl "displayName" .Values.sso.oidc.displayName)) -}}
+{{- end -}}
 {{- include "posthog.requireTogether" (dict "section" "cloudflareTurnstile" "fields" (dict "siteKey" .Values.cloudflareTurnstile.siteKey "secretKey" .Values.cloudflareTurnstile.secretKey)) -}}
 {{- include "posthog.requireTogether" (dict "section" "objectStorage" "fields" (dict "accessKeyId" .Values.objectStorage.accessKeyId "secretAccessKey" .Values.objectStorage.secretAccessKey)) -}}
 {{- include "posthog.requireGate" (dict "section" "statsd" "gateName" "host" "gate" .Values.statsd.host "fields" (dict "prefix" .Values.statsd.prefix)) -}}
@@ -370,8 +421,10 @@ Common environment variables shared by most PostHog services.
 {{- end }}
 {{ include "posthog.envValue" (dict "name" "TRUST_ALL_PROXIES" "value" .Values.trustAllProxies) }}
 {{ include "posthog.envValue" (dict "name" "ALLOWED_HOSTS" "value" .Values.allowedHosts) }}
+{{- if eq .Values.variant "watts" }}
 {{ include "posthog.envValue" (dict "name" "DISABLE_PASSWORD_LOGIN" "value" .Values.auth.disablePasswordLogin) }}
 {{ include "posthog.envValue" (dict "name" "DISABLE_PASSKEY_LOGIN" "value" .Values.auth.disablePasskeyLogin) }}
+{{- end }}
 {{- if include "posthog.hasValue" .Values.sso.github.key }}
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITHUB_KEY" "value" .Values.sso.github.key) }}
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GITHUB_SECRET" "value" .Values.sso.github.secret) }}
@@ -386,6 +439,7 @@ Common environment variables shared by most PostHog services.
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY" "value" .Values.sso.google.key) }}
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET" "value" .Values.sso.google.secret) }}
 {{ end }}
+{{- if eq .Values.variant "watts" }}
 {{- if include "posthog.hasValue" .Values.sso.oidc.key }}
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_OIDC_ENDPOINT" "value" .Values.sso.oidc.endpoint) }}
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_KEY" "value" .Values.sso.oidc.key) }}
@@ -397,6 +451,7 @@ Common environment variables shared by most PostHog services.
 {{ include "posthog.envValue" (dict "name" "SOCIAL_AUTH_OIDC_DISPLAY_NAME" "value" .Values.sso.oidc.displayName) }}
 {{ end }}
 {{ end }}
+{{- end }}
 {{- if include "posthog.hasValue" .Values.email.host }}
 {{- include "posthog.requireNonEmpty" (dict "section" "email" "fields" (dict "port" .Values.email.port "useTLS" .Values.email.useTLS "useSSL" .Values.email.useSSL)) }}
 - name: EMAIL_ENABLED

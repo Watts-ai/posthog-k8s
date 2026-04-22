@@ -25,6 +25,12 @@ domain: posthog.example.com
 siteUrl: ""  # defaults to https://<domain>, override for http testing
 secureCookies: "true"  # set "false" when not behind TLS
 
+# Image variant: "upstream" (default) or "watts"
+# "upstream" uses official PostHog images.
+# "watts" uses the watts-ai PostHog fork with additional features.
+# See https://github.com/watts-ai/posthog/blob/master/CHANGES.md
+variant: "upstream"
+
 # Secrets
 # - create: true → chart auto-generates a Secret with crypto-secure random values
 # - create: false → chart expects the Secret to already exist (e.g. via ExternalSecrets)
@@ -38,8 +44,8 @@ secrets:
 # To upgrade: update tags here and bump Chart version.
 images:
   posthog:
-    repository: ghcr.io/watts-ai/posthog/posthog
-    tag: watts-b5321ca7b29220a7dcbf1055d231432246a1bcc3
+    repository: ""  # override for custom registry
+    tag: ""         # override to pin a specific tag
   posthogNode:
     repository: posthog/posthog-node
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989

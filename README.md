@@ -13,6 +13,31 @@ PostHog will be available once all pods are ready (~5-10 minutes on first instal
 
 **Note:** The chart exposes PostHog over plain HTTP on port 8000. The `domain` value is used by PostHog internally (site URL, CORS, cookie domain) but does **not** configure TLS, DNS, or ingress routing. You are responsible for terminating TLS and routing traffic to the service (e.g., via an Ingress resource, a load balancer, or a reverse proxy).
 
+## Variants
+
+The chart supports two image variants for the PostHog application:
+
+| Variant | Description |
+|---------|-------------|
+| `upstream` (default) | Official [PostHog](https://github.com/PostHog/posthog) images |
+| `watts` | [Watts-ai fork](https://github.com/watts-ai/posthog) with additional features — see [CHANGES.md](https://github.com/watts-ai/posthog/blob/master/CHANGES.md) |
+
+```yaml
+# Use the watts-ai fork
+variant: "watts"
+```
+
+The variant controls only the PostHog app image. Infrastructure images (ClickHouse, GeoIP, etc.) are the same for both variants. If you configure a fork-specific feature (e.g. OIDC SSO) with `variant: "upstream"`, the chart will fail at template time with a descriptive error.
+
+You can always override the image directly regardless of variant:
+
+```yaml
+images:
+  posthog:
+    repository: "my-registry.internal/posthog"
+    tag: "my-custom-tag"
+```
+
 ## Configuration
 
 See all available values:
@@ -60,7 +85,7 @@ Sections activate when their trigger fields are set. If you provide a partial co
 | SSO GitHub | `key`, `secret` | — |
 | SSO GitLab | `key`, `secret` | — |
 | SSO Google | `key`, `secret` | — |
-| SSO OIDC | `key`, `secret`, `endpoint` | `iconUrl`, `displayName` |
+| SSO OIDC (watts only) | `key`, `secret`, `endpoint` | `iconUrl`, `displayName` |
 | Cloudflare Turnstile | `siteKey`, `secretKey` | — |
 | WorkOS Radar | `apiKey` | — |
 | StatsD | `host` | `prefix` |
@@ -191,12 +216,15 @@ secrets:
 
 ### Images
 
-All PostHog image tags default to the chart's `appVersion` (a PostHog commit SHA). Infrastructure images are pinned to specific versions. Override any image for airgapped/mirrored registries:
+The PostHog app image is selected by the `variant` field (see [Variants](#variants)).
+All other images are pinned to specific commits or versions.
+Override any image for airgapped or mirrored registries:
 
 ```yaml
 images:
   posthog:
     repository: my-registry.internal/posthog/posthog
+    tag: "my-tag"
   clickhouse:
     repository: my-registry.internal/posthog-clickhouse
   capture:
