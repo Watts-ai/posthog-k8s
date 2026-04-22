@@ -331,6 +331,14 @@ Common environment variables shared by most PostHog services.
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: oidc-client-secret
+{{- if .Values.sso.oidc.iconUrl }}
+- name: SOCIAL_AUTH_OIDC_ICON_URL
+  value: {{ .Values.sso.oidc.iconUrl | quote }}
+{{- end }}
+{{- if .Values.sso.oidc.displayName }}
+- name: SOCIAL_AUTH_OIDC_DISPLAY_NAME
+  value: {{ .Values.sso.oidc.displayName | quote }}
+{{- end }}
 {{- end }}
 {{- if .Values.email.enabled }}
 - name: EMAIL_ENABLED

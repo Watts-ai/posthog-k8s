@@ -29,3 +29,5 @@ spec:
               value: postgres://posthog:$(PGPASSWORD)@{{ include "posthog.fullname" . }}-db:5432/posthog
             - name: CDP_REDIS_HOST
               value: {{ include "posthog.fullname" . }}-redis
+            - name: CYMBAL_URL
+              value: http://{{ include "posthog.fullname" . }}-cymbal:3302
