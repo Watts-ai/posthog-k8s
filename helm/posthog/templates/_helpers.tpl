@@ -143,6 +143,12 @@ Common environment variables shared by most PostHog services.
     secretKeyRef:
       name: {{ include "posthog.secretName" . }}
       key: clickhouse-app-password
+- name: CLICKHOUSE_LOGS_CLUSTER_HOST
+  value: {{ if eq .Values.clickhouse.type "external" }}{{ .Values.clickhouse.external.host }}{{ else }}{{ include "posthog.fullname" . }}-clickhouse{{ end }}
+- name: CLICKHOUSE_LOGS_CLUSTER_PORT
+  value: "9000"
+- name: CLICKHOUSE_LOGS_CLUSTER_SECURE
+  value: "false"
 - name: REDIS_URL
   value: {{ if eq .Values.redis.type "external" }}{{ .Values.redis.external.url }}{{ else }}redis://{{ include "posthog.fullname" . }}-redis:6379/{{ end }}
 - name: KAFKA_HOSTS
