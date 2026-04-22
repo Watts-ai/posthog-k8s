@@ -32,6 +32,8 @@ spec:
               value: {{ include "posthog.fullname" . }}-kafka:9092
             - name: REDIS_URL
               value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+            - name: KAFKA_ERROR_TRACKING_TOPIC
+              value: ingestion-errortracking-main
             - name: CAPTURE_MODE
               value: events
             - name: RUST_LOG
