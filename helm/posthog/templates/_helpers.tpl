@@ -340,6 +340,14 @@ Common environment variables shared by most PostHog services.
   value: {{ .Values.sso.oidc.displayName | quote }}
 {{- end }}
 {{- end }}
+{{- if .Values.auth.disablePasswordLogin }}
+- name: DISABLE_PASSWORD_LOGIN
+  value: "true"
+{{- end }}
+{{- if .Values.auth.disablePasskeyLogin }}
+- name: DISABLE_PASSKEY_LOGIN
+  value: "true"
+{{- end }}
 {{- if .Values.email.enabled }}
 - name: EMAIL_ENABLED
   value: "true"

@@ -17,7 +17,7 @@ secrets:
 images:
   posthog:
     repository: ghcr.io/watts-ai/posthog/posthog
-    tag: watts-48c30f1055d15f3aa06b0775c4982a995e9b8eb0
+    tag: watts-4cf0a85e1f61c22c60a12a87149ac00185eaf103
   posthogNode:
     repository: posthog/posthog-node
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
@@ -101,6 +101,11 @@ email:
   useTls: true
   useSsl: false
   defaultFrom: ""
+
+# Authentication controls
+auth:
+  disablePasswordLogin: false
+  disablePasskeyLogin: false
 
 # Slack integration (also configurable via PostHog UI)
 slack:
