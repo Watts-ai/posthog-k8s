@@ -26,7 +26,7 @@ images:
     # tag defaults to <chartVersion>-<appVersion> via _helpers.tpl
   capture:
     repository: ghcr.io/posthog/posthog/capture
-    tag: sha-ae8c37f
+    tag: sha-30b20bc
   featureFlags:
     repository: ghcr.io/posthog/posthog/feature-flags
     tag: sha-06bb98c
