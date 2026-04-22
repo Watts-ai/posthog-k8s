@@ -69,10 +69,10 @@ PostHog Node image.
 {{- end }}
 
 {{/*
-ClickHouse image (custom). Tag defaults to <chartVersion>-<appVersion>.
+ClickHouse image (custom). Tag defaults to chart version.
 */}}
 {{- define "posthog.clickhouseImage" -}}
-{{ .Values.images.clickhouse.repository }}:{{ .Values.images.clickhouse.tag | default (printf "%s-%s" .Chart.Version .Chart.AppVersion) }}
+{{ .Values.images.clickhouse.repository }}:{{ .Values.images.clickhouse.tag | default .Chart.Version }}
 {{- end }}
 
 {{/*

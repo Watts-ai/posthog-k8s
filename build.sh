@@ -3,17 +3,17 @@ set -euo pipefail
 
 CHART="helm/posthog/Chart.yaml"
 VERSION=$(grep '^version:' "$CHART" | awk '{print $2}')
-APP_VERSION=$(grep '^appVersion:' "$CHART" | awk '{print $2}' | tr -d '"')
+POSTHOG_COMMIT=$(cat images/clickhouse/POSTHOG_COMMIT | tr -d '[:space:]')
 REGISTRY="${REGISTRY:-ghcr.io/watts-ai}"
 IMAGE="${REGISTRY}/posthog-clickhouse"
-TAG="${VERSION}-${APP_VERSION}"
+TAG="${VERSION}"
 
 echo "Building ${IMAGE}:${TAG}"
 echo "  Chart version:   ${VERSION}"
-echo "  PostHog commit:  ${APP_VERSION}"
+echo "  PostHog commit:  ${POSTHOG_COMMIT}"
 
 docker build \
-    --build-arg POSTHOG_COMMIT="${APP_VERSION}" \
+    --build-arg POSTHOG_COMMIT="${POSTHOG_COMMIT}" \
     -t "${IMAGE}:${TAG}" \
     -t "${IMAGE}:latest" \
     -f images/clickhouse/Dockerfile \

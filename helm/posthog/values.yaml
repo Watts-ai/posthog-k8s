@@ -51,7 +51,7 @@ images:
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
   clickhouse:
     repository: ghcr.io/watts-ai/posthog-clickhouse
-    # tag defaults to <chartVersion>-<appVersion> via _helpers.tpl
+    # tag defaults to chart version via _helpers.tpl
   capture:
     repository: ghcr.io/posthog/posthog/capture
     tag: sha-30b20bc
@@ -73,7 +73,7 @@ images:
   geoip:
     repository: ghcr.io/watts-ai/posthog-geoip
     tag: latest
-  # Infrastructure (pinned versions, not tied to appVersion)
+  # Infrastructure (pinned versions)
   postgres:
     repository: postgres
     tag: 15.12-alpine
