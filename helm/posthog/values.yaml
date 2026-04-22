@@ -17,7 +17,7 @@ secrets:
 images:
   posthog:
     repository: ghcr.io/watts-ai/posthog/posthog
-    tag: watts-b7bc1eff93db61c043194448dfed7b1f87a3feed
+    tag: watts-b5321ca7b29220a7dcbf1055d231432246a1bcc3
   posthogNode:
     repository: posthog/posthog-node
     tag: 30c8ab7fe262baa51c639565ebbd0041280ef989
