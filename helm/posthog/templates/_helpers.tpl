@@ -2,7 +2,7 @@
 Pinned PostHog app image commits — update these when bumping versions.
 */}}
 {{- define "posthog.upstreamCommit" -}}738b8b39bf26cdd6df530ec59cfbf261ff27788c{{- end -}}
-{{- define "posthog.wattsCommit" -}}6d114fc5d47c4c0935fc4576258932296bc66048{{- end -}}
+{{- define "posthog.wattsCommit" -}}8ac6d52645f267b67dff2ac9337ba0ed67243c20{{- end -}}
 
 {{/*
 Chart name.
