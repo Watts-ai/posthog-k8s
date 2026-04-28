@@ -54,22 +54,22 @@ images:
     # tag defaults to chart version via _helpers.tpl
   capture:
     repository: ghcr.io/posthog/posthog/capture
-    tag: sha-30b20bc
+    tag: sha-668a6d0
   featureFlags:
     repository: ghcr.io/posthog/posthog/feature-flags
-    tag: sha-06bb98c
+    tag: sha-5a4e46b
   propertyDefsRs:
     repository: ghcr.io/posthog/posthog/property-defs-rs
-    tag: sha-babbe33
+    tag: sha-99ffbd7
   cyclotronJanitor:
     repository: ghcr.io/posthog/posthog/cyclotron-janitor
-    tag: sha-b238b34
+    tag: sha-8a8d0ed
   cymbal:
     repository: ghcr.io/posthog/posthog/cymbal
-    tag: sha-fd4b210
+    tag: sha-241a3ac
   livestream:
     repository: ghcr.io/posthog/posthog/livestream
-    tag: sha-77fc873
+    tag: sha-ed68a5b
   geoip:
     repository: ghcr.io/watts-ai/posthog-geoip
     tag: latest
