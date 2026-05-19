@@ -315,6 +315,8 @@ Common environment variables shared by most PostHog services.
   value: "9000"
 - name: CLICKHOUSE_LOGS_CLUSTER_SECURE
   value: "false"
+- name: CLICKHOUSE_LOGS_DATABASE
+  value: "posthog"
 {{- if eq .Values.redis.type "external" }}
 {{ include "posthog.envValue" (dict "name" "REDIS_URL" "value" .Values.redis.external.url) }}
 {{- else }}
