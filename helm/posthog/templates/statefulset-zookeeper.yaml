@@ -24,6 +24,11 @@ spec:
           ports:
             - name: client
               containerPort: 2181
+          env:
+            - name: ZOO_AUTOPURGE_PURGEINTERVAL
+              value: "1"
+            - name: ZOO_AUTOPURGE_SNAPRETAINCOUNT
+              value: "3"
           volumeMounts:
             - name: zookeeper-data
               mountPath: /data
