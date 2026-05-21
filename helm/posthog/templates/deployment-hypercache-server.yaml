@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "posthog.fullname" . }}-hypercache-server
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "hypercache-server") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "posthog.selectorLabels" (dict "context" . "component" "hypercache-server") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "posthog.labels" . | nindent 8 }}
+        {{- include "posthog.selectorLabels" (dict "context" . "component" "hypercache-server") | nindent 8 }}
+    spec:
+      {{- include "posthog.scheduling" . | nindent 6 }}
+      containers:
+        - name: hypercache-server
+          image: {{ include "posthog.rustImage" (dict "repo" .Values.images.hypercacheServer.repository "tag" (.Values.images.hypercacheServer.tag)) }}
+          ports:
+            - containerPort: 3002
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /_readiness
+              port: 3002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          env:
+            - name: REDIS_URL
+              value: redis://{{ include "posthog.fullname" . }}-redis:6379/
+            - name: ADDRESS
+              value: "0.0.0.0:3002"
+            - name: RUST_LOG
+              value: info
+            {{- if eq .Values.objectStorage.type "internal" }}
+            - name: OBJECT_STORAGE_ENDPOINT
+              value: http://{{ include "posthog.fullname" . }}-seaweedfs:8333
+            - name: OBJECT_STORAGE_BUCKET
+              value: posthog
+            {{- else if .Values.objectStorage.external.endpoint }}
+            - name: OBJECT_STORAGE_ENDPOINT
+              value: {{ .Values.objectStorage.external.endpoint }}
+            - name: OBJECT_STORAGE_REGION
+              value: {{ .Values.objectStorage.external.region | default "us-east-1" }}
+            - name: OBJECT_STORAGE_BUCKET
+              value: {{ .Values.objectStorage.external.bucket | default "posthog" }}
+            {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "posthog.fullname" . }}-hypercache-server
+  labels:
+    {{- include "posthog.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3002
+      targetPort: http
+      name: http
+  selector:
+    {{- include "posthog.selectorLabels" (dict "context" . "component" "hypercache-server") | nindent 4 }}

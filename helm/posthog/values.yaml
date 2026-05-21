@@ -61,6 +61,9 @@ images:
   propertyDefsRs:
     repository: ghcr.io/posthog/posthog/property-defs-rs
     tag: sha-99ffbd7
+  hypercacheServer:
+    repository: ghcr.io/posthog/posthog/hypercache-server
+    tag: sha-7b8050a
   cyclotronJanitor:
     repository: ghcr.io/posthog/posthog/cyclotron-janitor
     tag: sha-8a8d0ed

@@ -73,6 +73,21 @@ spec:
                 name: {{ include "posthog.fullname" . }}-feature-flags
                 port:
                   number: 3001
+          # Remote config + surveys (hypercache-server)
+          - path: /array
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-hypercache-server
+                port:
+                  number: 3002
+          - path: /surveys
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-hypercache-server
+                port:
+                  number: 3002
           # Livestream
           - path: /livestream
             pathType: Prefix
