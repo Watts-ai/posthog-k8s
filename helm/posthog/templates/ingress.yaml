@@ -66,6 +66,13 @@ spec:
                 name: {{ include "posthog.fullname" . }}-feature-flags
                 port:
                   number: 3001
+          - path: /decide
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "posthog.fullname" . }}-feature-flags
+                port:
+                  number: 3001
           # Livestream
           - path: /livestream
             pathType: Prefix
