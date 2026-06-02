@@ -17,6 +17,10 @@ spec:
       labels:
         {{- include "posthog.labels" . | nindent 8 }}
         {{- include "posthog.selectorLabels" (dict "context" . "component" "db") | nindent 8 }}
+      {{- with .Values.postgres.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       {{- include "posthog.scheduling" . | nindent 6 }}
       containers:
